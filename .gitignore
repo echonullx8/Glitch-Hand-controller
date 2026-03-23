@@ -1,24 +1,30 @@
-# Logs
-logs
-*.log
+# 依赖
+node_modules/
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# 构建
+dist/
+build/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# 环境
+.env*.local
+.env
+
+# 编辑器
+.vscode/
+.idea/
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+
+# 日志
+logs/
+*.log
+
+# **保留所有模型/WASM**（你的核心！）
+!public/models/
+!public/models/**
+!public/mediapipe*/
+!public/mediapipe/**
+!*.wasm
+!*.bin
+!**/*.wasm
+!**/*.bin
