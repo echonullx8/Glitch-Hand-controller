@@ -1,4 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+// src/components/ui/ControlPanel.tsx
+// 【清理版】移除了 Seal Image Upload, Presets
+
+import React, { useEffect, useRef, useState } from 'react'; 
 import { useAppStore } from '../../store/useAppStore';
 import { midiService } from '../../services/midiService';
 
@@ -40,6 +43,7 @@ const DEFAULT_MAPPINGS: MidiMapping[] = [
   { id: 'g-both', hand: 'Global', parameter: 'bothPresent', cc: 25, channel: 1, label: 'Both', min: 0, max: 127 },
 ];
 
+// CompactMappingRow 组件保持不变
 const CompactMappingRow = ({ mapping, isSolo, onToggleSolo, deviceId, isMuted, anySoloActive }: any) => {
   const handDataRef = useAppStore(state => state.handDataRef);
   const barRef = useRef<HTMLDivElement>(null);
@@ -90,9 +94,9 @@ const EFFECT_TYPES: EffectType[] = ['None', 'SimpleGlitch', 'AnalogGlitch', 'Par
 export const ControlPanel: React.FC = () => {
   const {
     mode, setMode, addVideoClip, videoClips, selectVideoClip, activeClipId, removeVideoClip,
-    visualConfig, setVisualConfig, isSwapped, toggleSwap,
+    visualConfig, setVisualConfig,
     updateSlot, updateSlotParams, activeSlotIndex, setActiveSlotIndex,
-    loadPreset, savePreset, setSealImage, sealImage
+    // 【清理】移除了 loadPreset, savePreset, setSealImage, sealImage
   } = useAppStore();
 
   const [muted, setMuted] = useState({ left: false, right: false });
@@ -101,7 +105,7 @@ export const ControlPanel: React.FC = () => {
   const [selectedMidiDevice, setSelectedMidiDevice] = useState<string>('all');
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
-  const [soloMappingId, setSoloMappingId] = useState<string | null>(null);
+  const [soloMappingId, setSoloMappingId] = useState<string>('');
 
   useEffect(() => {
       const getCameras = async () => {
@@ -114,21 +118,17 @@ export const ControlPanel: React.FC = () => {
       };
       getCameras();
       midiService.initialize().then(() => { midiService.onStateChange(setMidiDevices); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) { addVideoClip(e.target.files[0]); setMode('VJ_MODE'); }
   };
 
-  const handleSealUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files[0]) {
-          const url = URL.createObjectURL(e.target.files[0]);
-          setSealImage(url);
-      }
-  };
+  // 【清理】移除了 handleSealUpload 函数
 
   const handleToggleSolo = (id: string) => {
-      setSoloMappingId(prev => prev === id ? null : id);
+      setSoloMappingId(prev => prev === id ? '' : id);
   };
 
   const toggleFullScreen = () => {
@@ -214,7 +214,6 @@ export const ControlPanel: React.FC = () => {
             <input type="file" accept="video/*" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
           </div>
           
-          <button onClick={toggleSwap} className={`text-[9px] px-2 py-1 rounded border ${isSwapped ? 'bg-purple-500 border-purple-500' : 'border-white/20'}`}>{isSwapped ? 'SWAP: ON' : 'SWAP: OFF'}</button>
           <button onClick={toggleFullScreen} className="text-[9px] px-2 py-1 rounded border border-white/20 hover:bg-white/10 text-white">FULL</button>
           
           {/* MIDI 开关 */}
@@ -228,23 +227,9 @@ export const ControlPanel: React.FC = () => {
       {showSettings && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 inline-flex bg-black/90 backdrop-blur border border-white/20 rounded p-3 z-[60] pointer-events-auto gap-4 items-stretch h-32 max-w-[95vw] overflow-x-auto">
               
-              {/* 1. PRESETS */}
-              <div className="flex flex-col gap-1 w-12 border-r border-white/10 pr-2 shrink-0">
-                  <span className="text-[9px] text-white/50 font-bold">SET</span>
-                  {[0, 1, 2, 3].map(i => (
-                      <button
-                        key={i}
-                        onClick={() => loadPreset(i)}
-                        onContextMenu={(e) => { e.preventDefault(); savePreset(i); }}
-                        className="flex-1 border border-white/20 text-[9px] hover:bg-white/10 text-white/50"
-                        title="Left: Load, Right: Save"
-                      >
-                          {i + 1}
-                      </button>
-                  ))}
-              </div>
+              {/* 【清理】移除了 PRESETS 区域 */}
 
-              {/* 2. SLOTS (Effect Rack) */}
+              {/* 1. SLOTS (Effect Rack) */}
               <div className="flex flex-col gap-1 w-40 border-r border-white/10 pr-2 shrink-0">
                   <span className="text-[9px] text-white/50 font-bold">RACK</span>
                   {visualConfig.slots.map((slot, idx) => (
@@ -265,7 +250,7 @@ export const ControlPanel: React.FC = () => {
                   ))}
               </div>
 
-              {/* 3. PARAMETERS (Contextual) */}
+              {/* 2. PARAMETERS (Contextual) */}
               <div className="flex flex-col gap-1 border-r border-white/10 pr-2 w-48 shrink-0">
                   <span className="text-[9px] text-cyan-400 font-bold truncate">PARAMS // {activeSlot.type}</span>
                   <div className="flex items-center gap-2 mb-2">
@@ -281,7 +266,7 @@ export const ControlPanel: React.FC = () => {
                   {renderParams()}
               </div>
 
-              {/* 4. GLOBAL SETTINGS */}
+              {/* 3. GLOBAL SETTINGS */}
               <div className="flex flex-col gap-1 w-28 shrink-0">
                   <span className="text-[9px] text-white/50 font-bold">GLOBAL</span>
                   <div className="flex items-center justify-between">
@@ -301,25 +286,12 @@ export const ControlPanel: React.FC = () => {
                       <button onClick={() => setVisualConfig({ mirrorSkeleton: !visualConfig.mirrorSkeleton })} className={`w-2 h-2 rounded-full ${visualConfig.mirrorSkeleton ? 'bg-green-500' : 'bg-gray-600'}`} />
                   </div>
                   
-                  {/* 图片上传按钮 */}
-                  <div className="flex items-center justify-between relative h-5 mt-1">
-                      <span className="text-[9px]">SEAL IMG</span>
-                      <button className={`text-[8px] px-2 h-full border rounded flex items-center ${sealImage ? 'bg-green-500/20 border-green-500 text-green-400' : 'border-white/20 hover:bg-white/10 text-white'}`}>
-                          {sealImage ? 'CHANGE' : 'UPLOAD'}
-                      </button>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleSealUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        title=""
-                      />
-                  </div>
+                  {/* 【清理】移除了 SEAL IMG 上传区域 */}
               </div>
           </div>
       )}
 
-      {/* MIDI PANELS */}
+      {/* MIDI PANELS (保持不变) */}
       {visualConfig.showMidiPanel && (
         <>
             <div className="absolute top-16 left-4 w-40 p-2 bg-black/30 backdrop-blur-sm rounded-lg border border-white/5 z-40 pointer-events-auto">
@@ -350,7 +322,7 @@ export const ControlPanel: React.FC = () => {
         </>
       )}
 
-      {/* VJ MODE CLIPS */}
+      {/* VJ MODE CLIPS (保持不变) */}
       {mode === 'VJ_MODE' && videoClips.length > 0 && showSettings && (
         <div className="absolute bottom-40 left-1/2 -translate-x-1/2 flex gap-2 p-2 bg-black/60 rounded-lg backdrop-blur z-50 pointer-events-auto">
           {videoClips.map(clip => (

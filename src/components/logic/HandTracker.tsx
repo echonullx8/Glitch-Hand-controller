@@ -1,10 +1,13 @@
 // src/components/logic/HandTracker.tsx
+// 【最终清理版】移除了所有 Swap 相关逻辑和引用
 
 import React, { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import type { HandLandmarkerResult } from '@mediapipe/tasks-vision';
-// 确保这里的路径是正确的，根据你之前的修改，可能是 @/utils/mediaPipeService 或 ../../../utils/mediaPipeService
+import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
+import type { HandLandmarkerResult } from '@mediapipe/tasks-vision'; // 明确标示为类型导入
+// 使用别名导入单例服务
 import { initializeHands, getHandLandmarkerInstance } from '@/utils/mediaPipeService';
+
 
 // --- 辅助函数 (保持不变) ---
 const calculateAngle = (p1: any, p2: any, p3: any) => {
@@ -19,8 +22,8 @@ const calculateAngle = (p1: any, p2: any, p3: any) => {
 const dist = (p1: {x:number, y:number}, p2: {x:number, y:number}) => Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 
 export const HandTracker: React.FC = () => {
-  // 【关键】从 store 里解构出 isSwapped 状态
-  const { mode, activeClipId, videoClips, handDataRef, isSwapped } = useAppStore();
+  // 【关键】不再从 store 里解构 isSwapped
+  const { mode, activeClipId, videoClips, handDataRef } = useAppStore();
   const videoElementRef = useRef<HTMLVideoElement | null>(null);
   const isMounted = useRef(true);
   const requestRef = useRef<number>(0);
@@ -78,13 +81,18 @@ export const HandTracker: React.FC = () => {
       if (!isMounted.current) return;
       const video = videoElementRef.current;
       if (!video) return;
-
+      if (mode === 'LIVE_AR' && video.srcObject && !video.paused) {
+          console.log("Stream already playing, skipping reload.");
+          return;
+      }
       if (video.srcObject) {
           const tracks = (video.srcObject as MediaStream).getTracks();
           tracks.forEach(t => t.stop());
           video.srcObject = null;
       }
-
+      if (video.src) {
+                video.src = '';
+            }
       try {
           if (mode === 'VJ_MODE' && activeClipId) {
               const clip = videoClips.find(c => c.id === activeClipId);
@@ -100,7 +108,9 @@ export const HandTracker: React.FC = () => {
               await video.play();
           }
       } catch (e) {
-          console.error("Stream Error:", e);
+          if (e.name !== 'AbortError') {
+              console.error("Stream Error:", e);
+          }
       }
   };
 
@@ -150,7 +160,7 @@ export const HandTracker: React.FC = () => {
         results.landmarks.forEach((lm, i) => {
             const handedness = results.handednesses[i][0];
             // 注意：这里MediaPipe识别的Right在镜像后视觉上是Left，反之亦然
-            const label = handedness.categoryName === 'Right' ? 'Left' : 'Right';
+            const label = handedness.categoryName;
             
             if (!lm || lm.length < 21) return;
             const wrist = lm[0];
@@ -199,30 +209,18 @@ export const HandTracker: React.FC = () => {
 
         // --- 更新 Store 数据 ---
 
-        // 【关键】根据 isSwapped 状态决定如何赋值
-        if (isSwapped) {
-            // 如果开启了交换：
-            // MediaPipe 计算出的右手数据 -> 赋值给 Store 的左手位置
-            // MediaPipe 计算出的左手数据 -> 赋值给 Store 的右手位置
-            currentData.left = newRight;
-            currentData.right = newLeft;
-        } else {
-            // 如果关闭了交换：正常赋值
-            currentData.left = newLeft;
-            currentData.right = newRight;
-        }
+        // 【关键】直接赋值，移除所有 Swap 判断逻辑
+        currentData.left = newLeft;
+        currentData.right = newRight;
 
-        // 【关键】后续所有状态更新都必须基于 currentData (最终决定)，而不是 newLeft/newRight (原始计算)
-        // 这里使用了非空断言 (!)，因为 currentData 已经赋值了。
-        // 也可以写成 (currentData.left ? 1 : 0)，更安全。
-        currentData.leftPresent = currentData.left ? 1 : 0;
-        currentData.rightPresent = currentData.right ? 1 : 0;
-        currentData.bothPresent = (currentData.left && currentData.right) ? 1 : 0;
+        currentData.leftPresent = newLeft ? 1 : 0;
+        currentData.rightPresent = newRight ? 1 : 0;
+        currentData.bothPresent = (newLeft && newRight) ? 1 : 0;
 
-        // 结印判定逻辑 (也使用 currentData)
-        if (currentData.left && currentData.right) {
-            const tDist = dist(currentData.left.thumbTip, currentData.right.thumbTip);
-            const iDist = dist(currentData.left.indexTip, currentData.right.indexTip);
+        // 结印判定逻辑
+        if (newLeft && newRight) {
+            const tDist = dist(newLeft.thumbTip, newRight.thumbTip);
+            const iDist = dist(newLeft.indexTip, newRight.indexTip);
             
             currentData.thumbsDist = tDist * 4;
             currentData.indexDist = iDist * 4;

@@ -1,5 +1,6 @@
 // --- START OF FILE mediaPipeService.ts ---
-import { FilesetResolver, HandLandmarker, HandLandmarkerResult } from '@mediapipe/tasks-vision';
+import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
+import type { HandLandmarkerResult } from '@mediapipe/tasks-vision'; // 明确标示为类型导入
 
 console.log("MediaPipeService Module Loaded (New API).");
 

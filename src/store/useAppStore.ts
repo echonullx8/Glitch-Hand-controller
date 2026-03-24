@@ -1,8 +1,11 @@
+// src/store/useAppStore.ts
+// 【清理版】移除了 Swap, Seal Image Upload, Presets
+
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import * as THREE from 'three';
 
-// --- 类型定义 ---
+// --- 类型定义 (保持不变) ---
 export interface VideoClip { id: string; url: string; name: string; }
 
 export interface HandMetrics {
@@ -21,14 +24,10 @@ export interface FaceMetrics {
 export interface HandData {
   left: HandMetrics | null; right: HandMetrics | null;
   face: FaceMetrics | null;
-  
   sealActive: boolean; sealSize: number; thumbsDist: number; indexDist: number;
-  
-  // 【新增】手部存在检测 (0 或 1)
   leftPresent: number;
   rightPresent: number;
   bothPresent: number;
-
   lastUpdated: number;
 }
 
@@ -49,7 +48,7 @@ export interface VisualConfig {
   slots: [EffectSlot, EffectSlot, EffectSlot, EffectSlot];
 }
 
-// --- 默认值 ---
+// --- 默认值 (保持不变) ---
 const DEFAULT_PARAMS: EffectParams = {
   amountSource: 'None', amountInvert: false,
   speedSource: 'None', speedInvert: false
@@ -85,20 +84,23 @@ interface AppState {
   updateSlot: (index: number, update: Partial<EffectSlot>) => void;
   updateSlotParams: (index: number, update: Partial<EffectParams>) => void;
   
-  presets: VisualConfig[];
-  loadPreset: (index: number) => void;
-  savePreset: (index: number) => void;
+  // 【移除】Presets 相关方法
+  // presets: VisualConfig[];
+  // loadPreset: (index: number) => void;
+  // savePreset: (index: number) => void;
 
   activeSlotIndex: number;
   setActiveSlotIndex: (index: number) => void;
 
-  isSwapped: boolean;
-  toggleSwap: () => void;
+  // 【移除】Swap 相关方法
+  // isSwapped: boolean;
+  // toggleSwap: () => void;
 
   handDataRef: { current: HandData };
   
-  maskTexture: THREE.CanvasTexture | null;
-  setMaskTexture: (texture: THREE.CanvasTexture) => void;
+  // 【移除】Mask Texture 相关方法
+  // maskTexture: THREE.CanvasTexture | null;
+  // setMaskTexture: (texture: THREE.CanvasTexture) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -151,23 +153,27 @@ export const useAppStore = create<AppState>()(
           return { visualConfig: { ...state.visualConfig, slots: newSlots } };
       }),
 
-      presets: [DEFAULT_VISUAL_CONFIG, DEFAULT_VISUAL_CONFIG, DEFAULT_VISUAL_CONFIG, DEFAULT_VISUAL_CONFIG],
+      // 【移除】Presets 初始化
+      // presets: [DEFAULT_VISUAL_CONFIG, DEFAULT_VISUAL_CONFIG, DEFAULT_VISUAL_CONFIG, DEFAULT_VISUAL_CONFIG],
       
-      loadPreset: (index) => set((state) => ({
-          visualConfig: JSON.parse(JSON.stringify(state.presets[index]))
-      })),
+      // 【移除】loadPreset 实现
+      // loadPreset: (index) => set((state) => ({
+      //     visualConfig: JSON.parse(JSON.stringify(state.presets[index]))
+      // })),
       
-      savePreset: (index) => set((state) => {
-          const newPresets = [...state.presets];
-          newPresets[index] = JSON.parse(JSON.stringify(state.visualConfig));
-          return { presets: newPresets };
-      }),
+      // 【移除】savePreset 实现
+      // savePreset: (index) => set((state) => {
+      //     const newPresets = [...state.presets];
+      //     newPresets[index] = JSON.parse(JSON.stringify(state.visualConfig));
+      //     return { presets: newPresets };
+      // }),
 
       activeSlotIndex: 0,
       setActiveSlotIndex: (index) => set({ activeSlotIndex: index }),
 
-      isSwapped: false,
-      toggleSwap: () => set((state) => ({ isSwapped: !state.isSwapped })),
+      // 【移除】Swap 初始化
+      // isSwapped: false,
+      // toggleSwap: () => set((state) => ({ isSwapped: !state.isSwapped })),
 
       handDataRef: {
         current: {
@@ -178,16 +184,18 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      maskTexture: null,
-      setMaskTexture: (texture) => set({ maskTexture: texture }),
+      // 【移除】Mask Texture 初始化
+      // maskTexture: null,
+      // setMaskTexture: (texture) => set({ maskTexture: texture }),
     }),
     {
-      name: 'hand-osc-settings-v2',
+      name: 'hand-osc-settings-v3', // 更新版本号以清除旧缓存
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         visualConfig: state.visualConfig,
-        presets: state.presets,
-        isSwapped: state.isSwapped,
+        // 【移除】presets 和 isSwapped 的持久化
+        // presets: state.presets,
+        // isSwapped: state.isSwapped,
       }),
       merge: (persistedState, currentState) => {
           return { ...currentState, ...(persistedState as any) };
@@ -196,7 +204,7 @@ export const useAppStore = create<AppState>()(
   )
 );
 
-// 【修改】getMetricValue 支持新参数
+// 【getMetricValue 函数保持不变，直接复制你原来的即可】
 export const getMetricValue = (source: string | undefined, data: HandData, inverted: boolean): number => {
     if (!source || source === 'None') return 0;
     
