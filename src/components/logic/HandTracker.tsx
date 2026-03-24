@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+// 【关键】只从新版包导入
 import { FilesetResolver, HandLandmarker, HandLandmarkerResult } from '@mediapipe/tasks-vision';
 
-// --- 辅助数学计算保持不变 ---
 const calculateAngle = (p1: any, p2: any, p3: any) => {
     if (!p1 || !p2 || !p3) return 0;
     const v1 = { x: p2.x - p1.x, y: p2.y - p1.y, z: p2.z - p1.z };
@@ -20,27 +20,28 @@ export const HandTracker: React.FC = () => {
   const handLandmarkerRef = useRef<HandLandmarker | null>(null);
   const isMounted = useRef(true);
   const requestRef = useRef<number>(0);
-  const lastVideoTimeRef = useRef(-1); // 用于新版API的帧时间戳记录
+  const lastVideoTimeRef = useRef(-1);
 
   useEffect(() => {
     isMounted.current = true;
-    console.log("HandTracker (Tasks API): Mount");
+    console.log("HandTracker: Mount (Using Tasks Vision API)");
 
-    // 1. 初始化新版 MediaPipe
     const initMediaPipe = async () => {
         try {
-            // FilesetResolver 自动处理 WASM 的加载，非常稳定
+            console.log("Downloading Wasm files...");
+            // 新版 API 的加载方式：明确指向 tasks-vision 的 wasm
             const vision = await FilesetResolver.forVisionTasks(
                 "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.12/wasm"
             );
             
+            console.log("Initializing HandLandmarker...");
             const landmarker = await HandLandmarker.createFromOptions(vision, {
                 baseOptions: {
-                    // 模型文件路径
+                    // 模型文件：使用新的 .task 格式
                     modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmark/hand_landmark_full/float16/1/hand_landmark_full.task`,
-                    delegate: "GPU" // 强制使用 GPU 加速
+                    delegate: "GPU"
                 },
-                runningMode: "VIDEO", // 我们处理的是连续视频流
+                runningMode: "VIDEO",
                 numHands: 2,
                 minHandDetectionConfidence: 0.5,
                 minHandPresenceConfidence: 0.5,
@@ -57,7 +58,6 @@ export const HandTracker: React.FC = () => {
 
     initMediaPipe();
 
-    // 2. 准备视频元素
     const video = document.createElement('video');
     video.autoplay = true;
     video.playsInline = true;
@@ -67,22 +67,21 @@ export const HandTracker: React.FC = () => {
 
     startStream();
 
-    // 3. 清理逻辑
     return () => {
-        console.log("HandTracker (Tasks API): Unmount");
+        console.log("HandTracker: Unmount");
         isMounted.current = false;
         if (requestRef.current) cancelAnimationFrame(requestRef.current);
         if (video.srcObject) {
             const tracks = (video.srcObject as MediaStream).getTracks();
             tracks.forEach(t => t.stop());
         }
-        // 新版 API 提供了非常安全的 close 方法，可以直接调用释放内存
+        // 新版可以安全关闭
         if (handLandmarkerRef.current) {
             handLandmarkerRef.current.close();
             handLandmarkerRef.current = null;
         }
     };
-  }, [mode, activeClipId]); // 依赖变化时重新初始化
+  }, [mode, activeClipId]);
 
   const startStream = async () => {
       if (!isMounted.current) return;
@@ -103,7 +102,7 @@ export const HandTracker: React.FC = () => {
                   await video.play();
               }
           } else {
-              // 依然建议使用 720p 以平衡性能和延迟
+              // 请求分辨率
               const stream = await navigator.mediaDevices.getUserMedia({
                   video: { width: 1280, height: 720 }
               });
@@ -111,29 +110,31 @@ export const HandTracker: React.FC = () => {
               await video.play();
           }
           
-          // 等待视频元数据加载完毕再开始检测循环
+          // 等待视频元数据加载完毕再开始检测
           video.addEventListener('loadeddata', predictWebcam);
       } catch (e) {
           console.error("Stream Error:", e);
       }
   };
 
-  // 核心检测循环
   const predictWebcam = async () => {
       if (!isMounted.current) return;
       
       const video = videoElementRef.current;
       const landmarker = handLandmarkerRef.current;
 
-      // 只有当模型准备好，且视频画面有更新时才进行推理
+      // 只有模型准备好且视频有更新时才推理
       if (video && landmarker && video.currentTime !== lastVideoTimeRef.current) {
           lastVideoTimeRef.current = video.currentTime;
           
-          // 【核心】新版的同步检测方法，传入当前时间戳
-          const startTimeMs = performance.now();
-          const results = landmarker.detectForVideo(video, startTimeMs);
-          
-          processResults(results);
+          try {
+              const startTimeMs = performance.now();
+              // 新版推理方法
+              const results = landmarker.detectForVideo(video, startTimeMs);
+              processResults(results);
+          } catch(e) {
+              // 忽略偶尔的推理错误
+          }
       }
 
       if (isMounted.current) {
@@ -141,7 +142,6 @@ export const HandTracker: React.FC = () => {
       }
   };
 
-  // 这里的逻辑和你之前调教好的 100% 一样，只是适配了新版 results 的数据结构
   const processResults = (results: HandLandmarkerResult) => {
     if (!isMounted.current) return;
     const currentData = handDataRef.current;
@@ -152,6 +152,9 @@ export const HandTracker: React.FC = () => {
         currentData.left = null;
         currentData.right = null;
         currentData.sealActive = false;
+        currentData.leftPresent = 0;
+        currentData.rightPresent = 0;
+        currentData.bothPresent = 0;
         currentData.lastUpdated = now;
         return;
     }
@@ -160,11 +163,10 @@ export const HandTracker: React.FC = () => {
         let newLeft = null;
         let newRight = null;
 
-        // 遍历检测到的手
+        // 遍历每只手
         results.landmarks.forEach((lm, i) => {
-            // 新版 API 的左右手标签在 handednesses 数组里
+            // 新版的 Handedness 结构：results.handednesses[i][0]
             const handedness = results.handednesses[i][0];
-            // MediaPipe 默认镜像，我们将 Right 视为 Left
             const label = handedness.categoryName === 'Right' ? 'Left' : 'Right';
             
             if (!lm || lm.length < 21) return;
@@ -175,7 +177,6 @@ export const HandTracker: React.FC = () => {
             
             if (!wrist || !middleMCP || !indexMCP || !pinkyMCP) return;
 
-            // 数学计算保持不变
             const palmSize = Math.sqrt(Math.pow(middleMCP.x - wrist.x, 2) + Math.pow(middleMCP.y - wrist.y, 2));
             const distance = Math.min(1, Math.max(0, (palmSize - 0.1) * 5.0));
 
@@ -205,18 +206,20 @@ export const HandTracker: React.FC = () => {
                 wrist: { x: wrist.x, y: wrist.y, z: wrist.z },
                 indexTip: { x: lm[8].x, y: lm[8].y },
                 thumbTip: { x: lm[4].x, y: lm[4].y },
-                rawLandmarks: lm // 依然保存原始点给骨骼渲染用
+                rawLandmarks: lm
             };
 
             if (label === 'Left') newLeft = metrics;
             else newRight = metrics;
         });
 
-        // 写入 Store
         currentData.left = newLeft;
         currentData.right = newRight;
+        currentData.leftPresent = newLeft ? 1 : 0;
+        currentData.rightPresent = newRight ? 1 : 0;
+        currentData.bothPresent = (newLeft && newRight) ? 1 : 0;
 
-        // 结印逻辑
+        // 结印
         if (newLeft && newRight) {
             const tDist = dist(newLeft.thumbTip, newRight.thumbTip);
             const iDist = dist(newLeft.indexTip, newRight.indexTip);

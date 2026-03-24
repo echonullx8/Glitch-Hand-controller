@@ -1,52 +1,93 @@
-import { Hands } from '@mediapipe/hands';
+// --- START OF FILE mediaPipeService.ts ---
+import { FilesetResolver, HandLandmarker, HandLandmarkerResult } from '@mediapipe/tasks-vision';
 
-console.log("MediaPipeService Module Loaded.");
+console.log("MediaPipeService Module Loaded (New API).");
 
-// 1. 在模块作用域内直接创建实例，绝不重复创建
-let handsInstance: Hands | null = null;
+let handLandmarker: HandLandmarker | null = null;
 let isInitializing = false;
 
-export const getHandsInstance = async (): Promise<Hands> => {
-    // 如果已经有了，直接返回
-    if (handsInstance) {
-        return handsInstance;
+// 定义一个类型用于回调
+type ResultsListener = (result: HandLandmarkerResult) => void;
+
+export const initializeHands = async (): Promise<HandLandmarker> => {
+    if (handLandmarker) {
+        return handLandmarker;
     }
 
-    // 如果正在初始化，等待它完成（简单的轮询等待）
     if (isInitializing) {
-        console.log("Waiting for Hands to initialize...");
-        while (!handsInstance) {
+        console.log("Waiting for HandLandmarker to initialize...");
+        while (!handLandmarker) {
             await new Promise(resolve => setTimeout(resolve, 50));
         }
-        return handsInstance;
+        return handLandmarker;
     }
 
     isInitializing = true;
-    console.log("Initializing Hands Instance for the first time...");
+    console.log("Initializing HandLandmarker (New API) for the first time...");
 
     try {
-        const hands = new Hands({
-            locateFile: (file) => {
-                        // 【关键】必须是绝对的本地路径，指向 public 文件夹
-                        return `/models/${file}`;
-                      },
-        });
+        // 1. 关键点：使用 CDN 加载 WASM 文件，解决部署难题
+        const visionGenAI = await FilesetResolver.forVisionTasks(
+            // 这里的版本号最好与你 package.json 中的 @mediapipe/tasks-vision 保持大致一致
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.9/wasm"
+        );
 
-        hands.setOptions({
-            maxNumHands: 2,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.5,
+        // 2. 创建手势识别器实例
+        // 注意：我们需要加载一个模型文件。官方推荐使用 CDN 链接。
+        handLandmarker = await HandLandmarker.createFromOptions(visionGenAI, {
+            baseOptions: {
+                modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+                delegate: "GPU" // 尝试使用 GPU 加速，如果不支持会自动回退到 CPU
+            },
+            runningMode: "VIDEO", // 设为 VIDEO 模式用于处理摄像头流
+            numHands: 2,
+            minHandDetectionConfidence: 0.5,
+            minHandPresenceConfidence: 0.5,
             minTrackingConfidence: 0.5,
         });
 
-        // 初始化完成后赋值给单例
-        handsInstance = hands;
         isInitializing = false;
-        console.log("Hands Instance Initialization Complete.");
-        return handsInstance;
+        console.log("HandLandmarker Initialization Complete.");
+        return handLandmarker;
+
     } catch (error) {
-        console.error("Failed to initialize Hands:", error);
+        console.error("Failed to initialize HandLandmarker:", error);
         isInitializing = false;
-        throw error; // 抛出错误让调用方知道
+        throw error;
     }
 };
+
+// 获取实例的辅助函数
+export const getHandLandmarkerInstance = () => {
+    if (!handLandmarker) {
+        throw new Error("HandLandmarker not initialized. Call initializeHands() first.");
+    }
+    return handLandmarker;
+}
+
+// --- 使用方式示例 (在你的 React 组件中) ---
+/*
+  // 假设你有一个 video 元素引用 videoRef
+  import { initializeHands, getHandLandmarkerInstance } from './mediaPipeService';
+
+  // 在 useEffect 中初始化
+  useEffect(() => {
+    const init = async () => {
+        await initializeHands();
+        // 初始化完成后开始检测循环
+        detectLoop();
+    };
+    init();
+  }, []);
+
+  const detectLoop = () => {
+      const landmarker = getHandLandmarkerInstance();
+      if (videoRef.current && videoRef.current.currentTime > 0) {
+          // 传入当前视频帧的时间戳
+          let startTimeMs = performance.now();
+          const result = landmarker.detectForVideo(videoRef.current, startTimeMs);
+          // 处理结果 result...
+      }
+      requestAnimationFrame(detectLoop);
+  }
+*/
