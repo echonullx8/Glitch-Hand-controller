@@ -1,8 +1,13 @@
+// src/components/logic/HandTracker.tsx
+
 import React, { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-// 【关键】只从新版包导入
-import { FilesetResolver, HandLandmarker, HandLandmarkerResult } from '@mediapipe/tasks-vision';
+// 【关键改动】不再直接导入 FilesetResolver 和 HandLandmarker 类，只导入类型
+import type { HandLandmarkerResult } from '@mediapipe/tasks-vision';
+// 【关键改动】导入我们的单例服务
+import { initializeHands, getHandLandmarkerInstance } from '../../services/mediaPipeService';
 
+// ... 保持不变的辅助函数 ...
 const calculateAngle = (p1: any, p2: any, p3: any) => {
     if (!p1 || !p2 || !p3) return 0;
     const v1 = { x: p2.x - p1.x, y: p2.y - p1.y, z: p2.z - p1.z };
@@ -17,71 +22,67 @@ const dist = (p1: {x:number, y:number}, p2: {x:number, y:number}) => Math.sqrt(M
 export const HandTracker: React.FC = () => {
   const { mode, activeClipId, videoClips, handDataRef } = useAppStore();
   const videoElementRef = useRef<HTMLVideoElement | null>(null);
-  const handLandmarkerRef = useRef<HandLandmarker | null>(null);
+  // 【关键改动】不再需要局部的 handLandmarkerRef
+  // const handLandmarkerRef = useRef<HandLandmarker | null>(null);
   const isMounted = useRef(true);
   const requestRef = useRef<number>(0);
   const lastVideoTimeRef = useRef(-1);
 
   useEffect(() => {
     isMounted.current = true;
-    console.log("HandTracker: Mount (Using Tasks Vision API)");
+    console.log("HandTracker: Mount (Using Shared Service)");
 
-    const initMediaPipe = async () => {
+    // 【关键改动】使用服务进行初始化
+    const setupMediaPipe = async () => {
         try {
-            console.log("Downloading Wasm files...");
-            // 新版 API 的加载方式：明确指向 tasks-vision 的 wasm
-            const vision = await FilesetResolver.forVisionTasks(
-                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.12/wasm"
-            );
-            
-            console.log("Initializing HandLandmarker...");
-            const landmarker = await HandLandmarker.createFromOptions(vision, {
-                baseOptions: {
-                    // 模型文件：使用新的 .task 格式
-                    modelAssetPath: `/models/hand_landmarker.task`,
-                    delegate: "GPU"
-                },
-                runningMode: "VIDEO",
-                numHands: 2,
-                minHandDetectionConfidence: 0.5,
-                minHandPresenceConfidence: 0.5,
-                minTrackingConfidence: 0.5
-            });
+            console.log("HandTracker requesting shared Hands initialization...");
+            // 这会等待全局单例初始化完成
+            await initializeHands();
             
             if (!isMounted.current) return;
-            handLandmarkerRef.current = landmarker;
-            console.log("HandLandmarker Ready.");
+            console.log("HandTracker received shared Hands instance. Starting stream...");
+            
+            // 初始化成功后，创建视频元素并开始流
+            createVideoElement();
+            startStream();
+
         } catch (error) {
-            console.error("Failed to initialize MediaPipe Tasks API:", error);
+            console.error("Failed to initialize shared MediaPipe service:", error);
         }
     };
 
-    initMediaPipe();
-
-    const video = document.createElement('video');
-    video.autoplay = true;
-    video.playsInline = true;
-    video.muted = true;
-    video.crossOrigin = 'Anonymous';
-    videoElementRef.current = video;
-
-    startStream();
+    setupMediaPipe();
 
     return () => {
         console.log("HandTracker: Unmount");
         isMounted.current = false;
         if (requestRef.current) cancelAnimationFrame(requestRef.current);
-        if (video.srcObject) {
+        const video = videoElementRef.current;
+        if (video && video.srcObject) {
             const tracks = (video.srcObject as MediaStream).getTracks();
             tracks.forEach(t => t.stop());
         }
-        // 新版可以安全关闭
-        if (handLandmarkerRef.current) {
-            handLandmarkerRef.current.close();
-            handLandmarkerRef.current = null;
-        }
+        // 【关键改动】不要在这里关闭全局实例，因为它可能被其他组件共享
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, activeClipId]);
+
+  // 辅助函数：创建视频元素
+  const createVideoElement = () => {
+      if (videoElementRef.current) return;
+      const video = document.createElement('video');
+      video.autoplay = true;
+      video.playsInline = true;
+      video.muted = true;
+      video.crossOrigin = 'Anonymous';
+      // 重要：设置视频尺寸，避免 MediaPipe 推理时尺寸不匹配
+      video.width = 1280;
+      video.height = 720;
+      videoElementRef.current = video;
+      
+      // 等待视频元数据加载完毕再开始检测
+      video.addEventListener('loadeddata', predictWebcam);
+  }
 
   const startStream = async () => {
       if (!isMounted.current) return;
@@ -109,31 +110,31 @@ export const HandTracker: React.FC = () => {
               video.srcObject = stream;
               await video.play();
           }
-          
-          // 等待视频元数据加载完毕再开始检测
-          video.addEventListener('loadeddata', predictWebcam);
       } catch (e) {
           console.error("Stream Error:", e);
       }
   };
 
   const predictWebcam = async () => {
-      if (!isMounted.current) return;
+      if (!isMounted.current || !videoElementRef.current) return;
       
       const video = videoElementRef.current;
-      const landmarker = handLandmarkerRef.current;
 
-      // 只有模型准备好且视频有更新时才推理
-      if (video && landmarker && video.currentTime !== lastVideoTimeRef.current) {
+      // 【关键改动】确保视频准备好，且有新的一帧
+      if (video.readyState >= 2 && video.currentTime !== lastVideoTimeRef.current) {
           lastVideoTimeRef.current = video.currentTime;
           
           try {
+              // 【关键改动】从服务获取全局单例
+              const landmarker = getHandLandmarkerInstance();
+              
               const startTimeMs = performance.now();
               // 新版推理方法
               const results = landmarker.detectForVideo(video, startTimeMs);
               processResults(results);
           } catch(e) {
-              // 忽略偶尔的推理错误
+              // 忽略偶尔的推理错误，或者处理未初始化的情况
+              // console.warn("Prediction skipped:", e);
           }
       }
 
@@ -143,12 +144,15 @@ export const HandTracker: React.FC = () => {
   };
 
   const processResults = (results: HandLandmarkerResult) => {
+    // ... 这里的代码逻辑保持完全不变 ...
+    // (为了节省篇幅，我省略了这里的具体实现，请直接复制你原来的 processResults 函数体)
     if (!isMounted.current) return;
     const currentData = handDataRef.current;
     const now = performance.now();
     
     // 如果没检测到手
     if (!results.landmarks || results.landmarks.length === 0) {
+        // ... (复制你原来的代码) ...
         currentData.left = null;
         currentData.right = null;
         currentData.sealActive = false;
@@ -170,6 +174,7 @@ export const HandTracker: React.FC = () => {
             const label = handedness.categoryName === 'Right' ? 'Left' : 'Right';
             
             if (!lm || lm.length < 21) return;
+            // ... (复制你原来的代码) ...
             const wrist = lm[0];
             const middleMCP = lm[9];
             const indexMCP = lm[5];
