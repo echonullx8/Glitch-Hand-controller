@@ -1,43 +1,52 @@
 import { Hands } from '@mediapipe/hands';
-import { FaceMesh } from '@mediapipe/face_mesh';
 
+console.log("MediaPipeService Module Loaded.");
+
+// 1. 在模块作用域内直接创建实例，绝不重复创建
 let handsInstance: Hands | null = null;
-let faceMeshInstance: FaceMesh | null = null;
+let isInitializing = false;
 
-export const getHandsInstance = () => {
-    if (!handsInstance) {
-        console.log("MediaPipeService: Creating Hands Instance");
-        handsInstance = new Hands({
+export const getHandsInstance = async (): Promise<Hands> => {
+    // 如果已经有了，直接返回
+    if (handsInstance) {
+        return handsInstance;
+    }
+
+    // 如果正在初始化，等待它完成（简单的轮询等待）
+    if (isInitializing) {
+        console.log("Waiting for Hands to initialize...");
+        while (!handsInstance) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        return handsInstance;
+    }
+
+    isInitializing = true;
+    console.log("Initializing Hands Instance for the first time...");
+
+    try {
+        const hands = new Hands({
             locateFile: (file) => {
-                // 强制使用 hands 的 CDN 路径
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`;
-            },
+                        // 【关键】必须是绝对的本地路径，指向 public 文件夹
+                        return `/models/${file}`;
+                      },
         });
-        handsInstance.setOptions({
+
+        hands.setOptions({
             maxNumHands: 2,
             modelComplexity: 1,
             minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5,
         });
-    }
-    return handsInstance;
-};
 
-export const getFaceMeshInstance = () => {
-    if (!faceMeshInstance) {
-        console.log("MediaPipeService: Creating FaceMesh Instance");
-        faceMeshInstance = new FaceMesh({
-            locateFile: (file) => {
-                // 强制使用 face_mesh 的 CDN 路径
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`;
-            },
-        });
-        faceMeshInstance.setOptions({
-            maxNumFaces: 1,
-            refineLandmarks: true,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5,
-        });
+        // 初始化完成后赋值给单例
+        handsInstance = hands;
+        isInitializing = false;
+        console.log("Hands Instance Initialization Complete.");
+        return handsInstance;
+    } catch (error) {
+        console.error("Failed to initialize Hands:", error);
+        isInitializing = false;
+        throw error; // 抛出错误让调用方知道
     }
-    return faceMeshInstance;
 };
