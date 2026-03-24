@@ -36,7 +36,7 @@ export const initializeHands = async (): Promise<HandLandmarker> => {
         // 注意：我们需要加载一个模型文件。官方推荐使用 CDN 链接。
         handLandmarker = await HandLandmarker.createFromOptions(visionGenAI, {
             baseOptions: {
-                modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+                modelAssetPath: `/models/hand_landmarker.task`,
                 delegate: "GPU" // 尝试使用 GPU 加速，如果不支持会自动回退到 CPU
             },
             runningMode: "VIDEO", // 设为 VIDEO 模式用于处理摄像头流
