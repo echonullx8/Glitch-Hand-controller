@@ -2,12 +2,11 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-// 【关键改动】不再直接导入 FilesetResolver 和 HandLandmarker 类，只导入类型
 import type { HandLandmarkerResult } from '@mediapipe/tasks-vision';
-// 【关键改动】导入我们的单例服务
+// 确保这里的路径是正确的，根据你之前的修改，可能是 @/utils/mediaPipeService 或 ../../../utils/mediaPipeService
 import { initializeHands, getHandLandmarkerInstance } from '@/utils/mediaPipeService';
 
-// ... 保持不变的辅助函数 ...
+// --- 辅助函数 (保持不变) ---
 const calculateAngle = (p1: any, p2: any, p3: any) => {
     if (!p1 || !p2 || !p3) return 0;
     const v1 = { x: p2.x - p1.x, y: p2.y - p1.y, z: p2.z - p1.z };
@@ -20,10 +19,9 @@ const calculateAngle = (p1: any, p2: any, p3: any) => {
 const dist = (p1: {x:number, y:number}, p2: {x:number, y:number}) => Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 
 export const HandTracker: React.FC = () => {
-  const { mode, activeClipId, videoClips, handDataRef } = useAppStore();
+  // 【关键】从 store 里解构出 isSwapped 状态
+  const { mode, activeClipId, videoClips, handDataRef, isSwapped } = useAppStore();
   const videoElementRef = useRef<HTMLVideoElement | null>(null);
-  // 【关键改动】不再需要局部的 handLandmarkerRef
-  // const handLandmarkerRef = useRef<HandLandmarker | null>(null);
   const isMounted = useRef(true);
   const requestRef = useRef<number>(0);
   const lastVideoTimeRef = useRef(-1);
@@ -32,17 +30,14 @@ export const HandTracker: React.FC = () => {
     isMounted.current = true;
     console.log("HandTracker: Mount (Using Shared Service)");
 
-    // 【关键改动】使用服务进行初始化
     const setupMediaPipe = async () => {
         try {
             console.log("HandTracker requesting shared Hands initialization...");
-            // 这会等待全局单例初始化完成
             await initializeHands();
             
             if (!isMounted.current) return;
             console.log("HandTracker received shared Hands instance. Starting stream...");
             
-            // 初始化成功后，创建视频元素并开始流
             createVideoElement();
             startStream();
 
@@ -62,12 +57,10 @@ export const HandTracker: React.FC = () => {
             const tracks = (video.srcObject as MediaStream).getTracks();
             tracks.forEach(t => t.stop());
         }
-        // 【关键改动】不要在这里关闭全局实例，因为它可能被其他组件共享
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, activeClipId]);
 
-  // 辅助函数：创建视频元素
   const createVideoElement = () => {
       if (videoElementRef.current) return;
       const video = document.createElement('video');
@@ -75,12 +68,9 @@ export const HandTracker: React.FC = () => {
       video.playsInline = true;
       video.muted = true;
       video.crossOrigin = 'Anonymous';
-      // 重要：设置视频尺寸，避免 MediaPipe 推理时尺寸不匹配
       video.width = 1280;
       video.height = 720;
       videoElementRef.current = video;
-      
-      // 等待视频元数据加载完毕再开始检测
       video.addEventListener('loadeddata', predictWebcam);
   }
 
@@ -103,7 +93,6 @@ export const HandTracker: React.FC = () => {
                   await video.play();
               }
           } else {
-              // 请求分辨率
               const stream = await navigator.mediaDevices.getUserMedia({
                   video: { width: 1280, height: 720 }
               });
@@ -117,42 +106,32 @@ export const HandTracker: React.FC = () => {
 
   const predictWebcam = async () => {
       if (!isMounted.current || !videoElementRef.current) return;
-      
       const video = videoElementRef.current;
 
-      // 【关键改动】确保视频准备好，且有新的一帧
       if (video.readyState >= 2 && video.currentTime !== lastVideoTimeRef.current) {
           lastVideoTimeRef.current = video.currentTime;
-          
           try {
-              // 【关键改动】从服务获取全局单例
               const landmarker = getHandLandmarkerInstance();
-              
               const startTimeMs = performance.now();
-              // 新版推理方法
               const results = landmarker.detectForVideo(video, startTimeMs);
               processResults(results);
           } catch(e) {
-              // 忽略偶尔的推理错误，或者处理未初始化的情况
               // console.warn("Prediction skipped:", e);
           }
       }
-
       if (isMounted.current) {
           requestRef.current = requestAnimationFrame(predictWebcam);
       }
   };
 
+  // --- 完整的 processResults 函数 ---
   const processResults = (results: HandLandmarkerResult) => {
-    // ... 这里的代码逻辑保持完全不变 ...
-    // (为了节省篇幅，我省略了这里的具体实现，请直接复制你原来的 processResults 函数体)
     if (!isMounted.current) return;
     const currentData = handDataRef.current;
     const now = performance.now();
     
-    // 如果没检测到手
+    // 如果没检测到手，清空数据
     if (!results.landmarks || results.landmarks.length === 0) {
-        // ... (复制你原来的代码) ...
         currentData.left = null;
         currentData.right = null;
         currentData.sealActive = false;
@@ -167,14 +146,13 @@ export const HandTracker: React.FC = () => {
         let newLeft = null;
         let newRight = null;
 
-        // 遍历每只手
+        // 遍历每只手进行处理
         results.landmarks.forEach((lm, i) => {
-            // 新版的 Handedness 结构：results.handednesses[i][0]
             const handedness = results.handednesses[i][0];
+            // 注意：这里MediaPipe识别的Right在镜像后视觉上是Left，反之亦然
             const label = handedness.categoryName === 'Right' ? 'Left' : 'Right';
             
             if (!lm || lm.length < 21) return;
-            // ... (复制你原来的代码) ...
             const wrist = lm[0];
             const middleMCP = lm[9];
             const indexMCP = lm[5];
@@ -214,20 +192,37 @@ export const HandTracker: React.FC = () => {
                 rawLandmarks: lm
             };
 
+            // 根据计算结果，临时存储到 newLeft 或 newRight
             if (label === 'Left') newLeft = metrics;
             else newRight = metrics;
         });
 
-        currentData.left = newLeft;
-        currentData.right = newRight;
-        currentData.leftPresent = newLeft ? 1 : 0;
-        currentData.rightPresent = newRight ? 1 : 0;
-        currentData.bothPresent = (newLeft && newRight) ? 1 : 0;
+        // --- 更新 Store 数据 ---
 
-        // 结印
-        if (newLeft && newRight) {
-            const tDist = dist(newLeft.thumbTip, newRight.thumbTip);
-            const iDist = dist(newLeft.indexTip, newRight.indexTip);
+        // 【关键】根据 isSwapped 状态决定如何赋值
+        if (isSwapped) {
+            // 如果开启了交换：
+            // MediaPipe 计算出的右手数据 -> 赋值给 Store 的左手位置
+            // MediaPipe 计算出的左手数据 -> 赋值给 Store 的右手位置
+            currentData.left = newRight;
+            currentData.right = newLeft;
+        } else {
+            // 如果关闭了交换：正常赋值
+            currentData.left = newLeft;
+            currentData.right = newRight;
+        }
+
+        // 【关键】后续所有状态更新都必须基于 currentData (最终决定)，而不是 newLeft/newRight (原始计算)
+        // 这里使用了非空断言 (!)，因为 currentData 已经赋值了。
+        // 也可以写成 (currentData.left ? 1 : 0)，更安全。
+        currentData.leftPresent = currentData.left ? 1 : 0;
+        currentData.rightPresent = currentData.right ? 1 : 0;
+        currentData.bothPresent = (currentData.left && currentData.right) ? 1 : 0;
+
+        // 结印判定逻辑 (也使用 currentData)
+        if (currentData.left && currentData.right) {
+            const tDist = dist(currentData.left.thumbTip, currentData.right.thumbTip);
+            const iDist = dist(currentData.left.indexTip, currentData.right.indexTip);
             
             currentData.thumbsDist = tDist * 4;
             currentData.indexDist = iDist * 4;
