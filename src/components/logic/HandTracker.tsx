@@ -38,7 +38,7 @@ export const HandTracker: React.FC = () => {
             const landmarker = await HandLandmarker.createFromOptions(vision, {
                 baseOptions: {
                     // 模型文件：使用新的 .task 格式
-                    modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmark/hand_landmark_full/float16/1/hand_landmark_full.task`,
+                    modelAssetPath: `/models/hand_landmarker.task`,
                     delegate: "GPU"
                 },
                 runningMode: "VIDEO",
