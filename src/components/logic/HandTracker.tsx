@@ -5,7 +5,7 @@ import { useAppStore } from '../../store/useAppStore';
 // 【关键改动】不再直接导入 FilesetResolver 和 HandLandmarker 类，只导入类型
 import type { HandLandmarkerResult } from '@mediapipe/tasks-vision';
 // 【关键改动】导入我们的单例服务
-import { initializeHands, getHandLandmarkerInstance } from '../../../utils/mediaPipeService';
+import { initializeHands, getHandLandmarkerInstance } from '@/utils/mediaPipeService';
 
 // ... 保持不变的辅助函数 ...
 const calculateAngle = (p1: any, p2: any, p3: any) => {
