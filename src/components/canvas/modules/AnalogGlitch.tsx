@@ -101,7 +101,7 @@ export const AnalogGlitch: React.FC<{ params: any }> = ({ params }) => {
     const amt = getMetricValue(p.amountSource, data, p.amountInvert);
     const spdVal = getMetricValue(p.speedSource, data, p.speedInvert);
     
-    const speedMultiplier = p.speedSource === 'None' ? 0.2 : (0.2 + spdVal * 5.0);
+    const speedMultiplier = p.speedSource === 'None' ? 0.2 : (0.2 + spdVal * 7.0);
     customTimeRef.current += delta * speedMultiplier;
 
     gl.setRenderTarget(renderTarget);

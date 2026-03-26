@@ -77,42 +77,38 @@ export const HandTracker: React.FC = () => {
       video.addEventListener('loadeddata', predictWebcam);
   }
 
-  const startStream = async () => {
-      if (!isMounted.current) return;
-      const video = videoElementRef.current;
-      if (!video) return;
-      if (mode === 'LIVE_AR' && video.srcObject && !video.paused) {
-          console.log("Stream already playing, skipping reload.");
-          return;
-      }
-      if (video.srcObject) {
-          const tracks = (video.srcObject as MediaStream).getTracks();
-          tracks.forEach(t => t.stop());
-          video.srcObject = null;
-      }
-      if (video.src) {
-                video.src = '';
+    const startStream = async () => {
+        if (!isMounted.current) return;
+        const video = videoElementRef.current;
+        if (!video) return;
+        
+        // 清理旧流
+        if (video.srcObject) {
+            const tracks = (video.srcObject as MediaStream).getTracks();
+            tracks.forEach(t => t.stop());
+            video.srcObject = null;
+        }
+        if (video.src) video.src = '';
+        
+        try {
+            // 🎯 HandTracker永远用摄像头（手势追踪）
+            const cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 1280, height: 720 }
+            });
+            video.srcObject = cameraStream;
+            await video.play();
+            
+            // VJ视频只传store，不影响HandTracker
+            if (mode === 'VJ_MODE' && activeClipId) {
+                const clip = videoClips.find(c => c.id === activeClipId);
+                if (clip) {
+                    useAppStore.setState({ vjVideoUrl: clip.url });
+                }
             }
-      try {
-          if (mode === 'VJ_MODE' && activeClipId) {
-              const clip = videoClips.find(c => c.id === activeClipId);
-              if (clip) {
-                  video.src = clip.url;
-                  await video.play();
-              }
-          } else {
-              const stream = await navigator.mediaDevices.getUserMedia({
-                  video: { width: 1280, height: 720 }
-              });
-              video.srcObject = stream;
-              await video.play();
-          }
-      } catch (e) {
-          if (e.name !== 'AbortError') {
-              console.error("Stream Error:", e);
-          }
-      }
-  };
+        } catch (e) {
+            console.error("Stream Error:", e);
+        }
+    };
 
   const predictWebcam = async () => {
       if (!isMounted.current || !videoElementRef.current) return;

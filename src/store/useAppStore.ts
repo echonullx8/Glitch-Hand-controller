@@ -112,6 +112,7 @@ export const useAppStore = create<AppState>()(
       videoClips: [],
       activeClipId: null,
       videoTexture: null,
+      vjVideoUrl: null,
       setVideoTexture: (t) => set({ videoTexture: t }),
 
       addVideoClip: (file) => {

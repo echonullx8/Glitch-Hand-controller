@@ -81,23 +81,60 @@ const SceneContent: React.FC = () => {
 };
 
 export const Scene: React.FC = () => {
-  return (
-    <div className="absolute inset-0 w-full h-full bg-black">
-      <Canvas
-        camera={{ position: [0, 0, 5], fov: 75 }}
-        gl={{
-          antialias: false,
-          alpha: false,
-          depth: false,
-          stencil: false,
-          powerPreference: "high-performance",
-          toneMapping: THREE.NoToneMapping,
-          outputColorSpace: THREE.SRGBColorSpace
-        }}
-        dpr={1}
+    const vjVideoUrl = useAppStore(state => state.vjVideoUrl);
+    const mode = useAppStore(state => state.mode);
+    const videoRef = React.useRef<HTMLVideoElement>(null);
+    
+    React.useEffect(() => {
+        const video = videoRef.current;
+        if (video && !video.srcObject) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => video.srcObject = stream)
+                    .catch(console.error);
+        }
+      }, []);
+    const previewClass = mode === 'VJ_MODE'
+        ? 'fixed bottom-8 right-8 w-32 h-24 z-50 pointer-events-none scale-x-[-1]'
+        : 'hidden';  // 🎯 CSS隐藏，不销毁DOM
+    
+    return (
+       <div className="absolute inset-0 w-full h-full bg-black relative">
+         {/* 🎬 VJ主视频背景 */}
+         {vjVideoUrl && (
+           <video
+             src={vjVideoUrl}
+             className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
+             autoPlay
+             loop
+             muted
+             playsInline
+           />
+         )}
+         
+         {/* Three.js Canvas（effect层） */}
+         <Canvas
+           camera={{ position: [0, 0, 5], fov: 75 }}
+           gl={{
+             antialias: false,
+             alpha: false,
+             depth: false,
+             stencil: false,
+             powerPreference: 'high-performance',
+             toneMapping: THREE.NoToneMapping,
+             outputColorSpace: THREE.SRGBColorSpace
+           }}
+           dpr={1}
       >
         <SceneContent />
       </Canvas>
-    </div>
-  );
-};
+      {/* 📹 右下角摄像头小预览（始终显示） */}
+            <div className={previewClass}>
+                    <video
+                      ref={videoRef}
+                      className="w-full h-full rounded-lg shadow-2xl border-4 border-white/20 bg-black"
+                      autoPlay muted playsInline
+                    />
+                  </div>
+                </div>
+              );
+            };
