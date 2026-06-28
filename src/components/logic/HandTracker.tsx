@@ -71,8 +71,8 @@ export const HandTracker: React.FC = () => {
       video.playsInline = true;
       video.muted = true;
       video.crossOrigin = 'Anonymous';
-      video.width = 1280;
-      video.height = 720;
+      video.width = 640;
+      video.height = 480;
       videoElementRef.current = video;
       video.addEventListener('loadeddata', predictWebcam);
   }
@@ -93,7 +93,11 @@ export const HandTracker: React.FC = () => {
         try {
             // 🎯 HandTracker永远用摄像头（手势追踪）
             const cameraStream = await navigator.mediaDevices.getUserMedia({
-                video: { width: 1280, height: 720 }
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    frameRate: { ideal: 30, max: 30 }
+                }
             });
             video.srcObject = cameraStream;
             await video.play();
