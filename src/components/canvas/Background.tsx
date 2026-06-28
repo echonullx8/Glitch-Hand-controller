@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import * as THREE from 'three';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useAppStore } from '../../store/useAppStore';
+import { getSharedCameraVideo } from '../../utils/cameraService';
 
 export const Background: React.FC = () => {
   const { viewport, camera } = useThree();
@@ -21,7 +22,11 @@ export const Background: React.FC = () => {
   const visibleWidth = visibleHeight * viewport.aspect;
 
   useEffect(() => {
-    let video = document.createElement('video');
+    let video: HTMLVideoElement | null = null;
+    let isCancelled = false;
+
+    const localVideo = document.createElement('video');
+    video = localVideo;
     video.crossOrigin = 'Anonymous';
     video.loop = true;
     video.playsInline = true;
@@ -37,18 +42,19 @@ export const Background: React.FC = () => {
     videoRef.current = video;
 
     const setupVideo = async () => {
+      if (!video) return;
+
       if (mode === 'VJ_MODE' && activeClipId) {
         const clip = videoClips.find(c => c.id === activeClipId);
         if (clip) video.src = clip.url;
       } else {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 } }
-          });
-          video.srcObject = stream;
+          video = await getSharedCameraVideo();
+          videoRef.current = video;
         } catch (e) { console.error(e); }
       }
       
+      if (isCancelled || !video) return;
       video.play().catch(() => {});
       
       const texture = new THREE.VideoTexture(video);
@@ -62,12 +68,11 @@ export const Background: React.FC = () => {
     setupVideo();
 
     return () => {
-      video.pause();
-      if (video.srcObject) {
-          const tracks = (video.srcObject as MediaStream).getTracks();
-          tracks.forEach(t => t.stop());
+      isCancelled = true;
+      if (video === localVideo) {
+        video.pause();
+        video.remove();
       }
-      video.remove();
     };
   }, [mode, activeClipId, setGlobalVideoTexture]);
 

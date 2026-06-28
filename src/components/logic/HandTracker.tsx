@@ -3,10 +3,10 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 import type { HandLandmarkerResult } from '@mediapipe/tasks-vision'; // 明确标示为类型导入
 // 使用别名导入单例服务
 import { initializeHands, getHandLandmarkerInstance } from '@/utils/mediaPipeService';
+import { getSharedCameraVideo } from '../../utils/cameraService';
 
 
 // --- 辅助函数 (保持不变) ---
@@ -25,6 +25,7 @@ export const HandTracker: React.FC = () => {
   // 【关键】不再从 store 里解构 isSwapped
   const { mode, activeClipId, videoClips, handDataRef } = useAppStore();
   const videoElementRef = useRef<HTMLVideoElement | null>(null);
+  const detectionCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isMounted = useRef(true);
   const requestRef = useRef<number>(0);
   const lastVideoTimeRef = useRef(-1);
@@ -41,8 +42,9 @@ export const HandTracker: React.FC = () => {
             if (!isMounted.current) return;
             console.log("HandTracker received shared Hands instance. Starting stream...");
             
-            createVideoElement();
+            await createVideoElement();
             startStream();
+            predictWebcam();
 
         } catch (error) {
             console.error("Failed to initialize shared MediaPipe service:", error);
@@ -55,53 +57,26 @@ export const HandTracker: React.FC = () => {
         console.log("HandTracker: Unmount");
         isMounted.current = false;
         if (requestRef.current) cancelAnimationFrame(requestRef.current);
-        const video = videoElementRef.current;
-        if (video && video.srcObject) {
-            const tracks = (video.srcObject as MediaStream).getTracks();
-            tracks.forEach(t => t.stop());
-        }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, activeClipId]);
 
-  const createVideoElement = () => {
-      if (videoElementRef.current) return;
-      const video = document.createElement('video');
-      video.autoplay = true;
-      video.playsInline = true;
-      video.muted = true;
-      video.crossOrigin = 'Anonymous';
-      video.width = 640;
-      video.height = 480;
-      videoElementRef.current = video;
-      video.addEventListener('loadeddata', predictWebcam);
+  const createVideoElement = async () => {
+      if (!videoElementRef.current) {
+          videoElementRef.current = await getSharedCameraVideo();
+      }
+      if (!detectionCanvasRef.current) {
+          const canvas = document.createElement('canvas');
+          canvas.width = 640;
+          canvas.height = 360;
+          detectionCanvasRef.current = canvas;
+      }
   }
 
     const startStream = async () => {
         if (!isMounted.current) return;
-        const video = videoElementRef.current;
-        if (!video) return;
-        
-        // 清理旧流
-        if (video.srcObject) {
-            const tracks = (video.srcObject as MediaStream).getTracks();
-            tracks.forEach(t => t.stop());
-            video.srcObject = null;
-        }
-        if (video.src) video.src = '';
         
         try {
-            // 🎯 HandTracker永远用摄像头（手势追踪）
-            const cameraStream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: { ideal: 640 },
-                    height: { ideal: 480 },
-                    frameRate: { ideal: 30, max: 30 }
-                }
-            });
-            video.srcObject = cameraStream;
-            await video.play();
-            
             // VJ视频只传store，不影响HandTracker
             if (mode === 'VJ_MODE' && activeClipId) {
                 const clip = videoClips.find(c => c.id === activeClipId);
@@ -117,13 +92,18 @@ export const HandTracker: React.FC = () => {
   const predictWebcam = async () => {
       if (!isMounted.current || !videoElementRef.current) return;
       const video = videoElementRef.current;
+      const canvas = detectionCanvasRef.current;
 
-      if (video.readyState >= 2 && video.currentTime !== lastVideoTimeRef.current) {
+      if (video.readyState >= 2 && canvas && video.currentTime !== lastVideoTimeRef.current) {
           lastVideoTimeRef.current = video.currentTime;
           try {
+              const ctx = canvas.getContext('2d', { alpha: false });
+              if (!ctx) return;
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
               const landmarker = getHandLandmarkerInstance();
               const startTimeMs = performance.now();
-              const results = landmarker.detectForVideo(video, startTimeMs);
+              const results = landmarker.detectForVideo(canvas, startTimeMs);
               processResults(results);
           } catch(e) {
               // console.warn("Prediction skipped:", e);

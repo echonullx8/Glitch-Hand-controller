@@ -9,6 +9,7 @@ import { HandParticles } from './modules/HandParticles';
 import { FlashEffect } from './modules/FlashEffect';
 import { FaceParticles } from './modules/FaceParticles';
 import { useAppStore } from '../../store/useAppStore';
+import { getSharedCameraStream } from '../../utils/cameraService';
 import * as THREE from 'three';
 
 // 本地定义类型
@@ -87,20 +88,12 @@ export const Scene: React.FC = () => {
         if (!video) return;
 
         if (mode === 'VJ_MODE' && !video.srcObject) {
-            navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: { ideal: 320 },
-                    height: { ideal: 240 },
-                    frameRate: { ideal: 15, max: 15 }
-                }
-            })
+            getSharedCameraStream()
                 .then(stream => video.srcObject = stream)
                 .catch(console.error);
         }
 
         if (mode !== 'VJ_MODE' && video.srcObject) {
-            const tracks = (video.srcObject as MediaStream).getTracks();
-            tracks.forEach(track => track.stop());
             video.srcObject = null;
         }
       }, [mode]);
