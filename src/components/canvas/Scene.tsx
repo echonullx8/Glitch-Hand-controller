@@ -8,7 +8,6 @@ import { AnalogGlitch } from './modules/AnalogGlitch';
 import { HandParticles } from './modules/HandParticles';
 import { FlashEffect } from './modules/FlashEffect';
 import { FaceParticles } from './modules/FaceParticles';
-import { HandTracker } from '../logic/HandTracker';
 import { useAppStore } from '../../store/useAppStore';
 import * as THREE from 'three';
 
@@ -49,8 +48,6 @@ const SceneContent: React.FC = () => {
 
   return (
     <>
-      <HandTracker />
-
       <group>
         <Background />
         <HandSkeleton />
@@ -87,12 +84,26 @@ export const Scene: React.FC = () => {
     
     React.useEffect(() => {
         const video = videoRef.current;
-        if (video && !video.srcObject) {
-            navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(stream => video.srcObject = stream)
-                    .catch(console.error);
+        if (!video) return;
+
+        if (mode === 'VJ_MODE' && !video.srcObject) {
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 320 },
+                    height: { ideal: 240 },
+                    frameRate: { ideal: 15, max: 15 }
+                }
+            })
+                .then(stream => video.srcObject = stream)
+                .catch(console.error);
         }
-      }, []);
+
+        if (mode !== 'VJ_MODE' && video.srcObject) {
+            const tracks = (video.srcObject as MediaStream).getTracks();
+            tracks.forEach(track => track.stop());
+            video.srcObject = null;
+        }
+      }, [mode]);
     const previewClass = mode === 'VJ_MODE'
         ? 'fixed bottom-8 right-8 w-32 h-24 z-50 pointer-events-none scale-x-[-1]'
         : 'hidden';  // 🎯 CSS隐藏，不销毁DOM
