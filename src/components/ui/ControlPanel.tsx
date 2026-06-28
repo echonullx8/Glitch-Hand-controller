@@ -43,6 +43,8 @@ const DEFAULT_MAPPINGS: MidiMapping[] = [
   { id: 'g-both', hand: 'Global', parameter: 'bothPresent', cc: 25, channel: 1, label: 'Both', min: 0, max: 127 },
 ];
 
+const MIDI_POLL_INTERVAL_MS = 33;
+
 // CompactMappingRow 组件保持不变
 const CompactMappingRow = ({ mapping, isSolo, onToggleSolo, deviceId, isMuted, anySoloActive }: any) => {
   const handDataRef = useAppStore(state => state.handDataRef);
@@ -51,7 +53,6 @@ const CompactMappingRow = ({ mapping, isSolo, onToggleSolo, deviceId, isMuted, a
   const lastValRef = useRef<number>(-1);
 
   useEffect(() => {
-    let animFrame: number;
     const loop = () => {
       const data = handDataRef.current;
       let val = 0;
@@ -71,10 +72,10 @@ const CompactMappingRow = ({ mapping, isSolo, onToggleSolo, deviceId, isMuted, a
           midiService.sendControlChange(deviceId, mapping.channel, mapping.cc, midiVal);
           lastValRef.current = midiVal;
       }
-      animFrame = requestAnimationFrame(loop);
     };
     loop();
-    return () => cancelAnimationFrame(animFrame);
+    const intervalId = window.setInterval(loop, MIDI_POLL_INTERVAL_MS);
+    return () => window.clearInterval(intervalId);
   }, [mapping, isSolo, deviceId, isMuted, anySoloActive]);
 
   return (
