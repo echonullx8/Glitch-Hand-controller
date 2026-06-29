@@ -11,9 +11,9 @@ const getCameraConstraints = (deviceId = '', exactDevice = true): MediaStreamCon
   audio: false,
   video: {
     ...(deviceId ? { deviceId: exactDevice ? { exact: deviceId } : { ideal: deviceId } } : {}),
-    width: { ideal: 1920 },
-    height: { ideal: 1080 },
-    frameRate: { ideal: 60 }
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    frameRate: { ideal: 30 }
   }
 });
 
@@ -25,12 +25,8 @@ const requestCameraStream = async (deviceId = ''): Promise<MediaStream> => {
       return navigator.mediaDevices.getUserMedia({ audio: false, video: true });
     }
 
-    try {
-      return await navigator.mediaDevices.getUserMedia(getCameraConstraints(deviceId, false));
-    } catch (idealError) {
-      console.warn('Camera device constraints failed.', exactError, idealError);
-      throw idealError;
-    }
+    console.warn('Selected camera device failed.', exactError);
+    throw exactError;
   }
 };
 
@@ -83,6 +79,17 @@ export const stopSharedCamera = () => {
   }
 };
 
+const createVideoForStream = async (stream: MediaStream): Promise<HTMLVideoElement> => {
+  const video = document.createElement('video');
+  video.autoplay = true;
+  video.playsInline = true;
+  video.muted = true;
+  video.crossOrigin = 'Anonymous';
+  video.srcObject = stream;
+  await waitForVideoReady(video);
+  return video;
+};
+
 export const getSharedCameraStream = async (deviceId = activeDeviceId): Promise<MediaStream> => {
   if (hasLiveVideoTrack(sharedStream) && deviceId === activeDeviceId) return sharedStream as MediaStream;
 
@@ -116,27 +123,27 @@ export const getSharedCameraVideo = async (deviceId = activeDeviceId): Promise<H
     sharedVideo = null;
   }
 
-  const video = document.createElement('video');
-  video.autoplay = true;
-  video.playsInline = true;
-  video.muted = true;
-  video.crossOrigin = 'Anonymous';
-  video.srcObject = await getSharedCameraStream(deviceId);
-  await waitForVideoReady(video);
-
-  sharedVideo = video;
+  const stream = await getSharedCameraStream(deviceId);
+  sharedVideo = await createVideoForStream(stream);
   return sharedVideo;
 };
 
 export const switchSharedCamera = async (deviceId: string): Promise<HTMLVideoElement> => {
-  stopSharedCamera();
-
   try {
-    const video = await getSharedCameraVideo(deviceId);
+    const nextStream = await requestCameraStream(deviceId);
+    const nextVideo = await createVideoForStream(nextStream);
+
+    sharedStream?.getTracks().forEach(track => track.stop());
+    sharedVideo?.pause();
+    sharedVideo?.remove();
+
+    sharedStream = nextStream;
+    sharedVideo = nextVideo;
+    activeDeviceId = deviceId;
+
     cameraChangeListeners.forEach(listener => listener());
-    return video;
+    return nextVideo;
   } catch (error) {
-    stopSharedCamera();
     throw error;
   }
 };
