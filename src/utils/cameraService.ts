@@ -1,6 +1,7 @@
 let sharedStream: MediaStream | null = null;
 let sharedVideo: HTMLVideoElement | null = null;
 let activeDeviceId = '';
+let sharedVideoRequest: Promise<HTMLVideoElement> | null = null;
 const cameraChangeListeners = new Set<() => void>();
 
 const hasLiveVideoTrack = (stream: MediaStream | null) => {
@@ -70,6 +71,7 @@ export const stopSharedCamera = () => {
   sharedStream?.getTracks().forEach(track => track.stop());
   sharedStream = null;
   activeDeviceId = '';
+  sharedVideoRequest = null;
 
   if (sharedVideo) {
     sharedVideo.pause();
@@ -107,6 +109,8 @@ export const getSharedCameraStream = async (deviceId = activeDeviceId): Promise<
 };
 
 export const getSharedCameraVideo = async (deviceId = activeDeviceId): Promise<HTMLVideoElement> => {
+  if (sharedVideoRequest) return sharedVideoRequest;
+
   if (sharedVideo && hasLiveVideoTrack(sharedVideo.srcObject as MediaStream | null)) {
     try {
       await waitForVideoReady(sharedVideo);
@@ -123,13 +127,22 @@ export const getSharedCameraVideo = async (deviceId = activeDeviceId): Promise<H
     sharedVideo = null;
   }
 
-  const stream = await getSharedCameraStream(deviceId);
-  sharedVideo = await createVideoForStream(stream);
-  return sharedVideo;
+  sharedVideoRequest = (async () => {
+    const stream = await getSharedCameraStream(deviceId);
+    sharedVideo = await createVideoForStream(stream);
+    return sharedVideo;
+  })();
+
+  try {
+    return await sharedVideoRequest;
+  } finally {
+    sharedVideoRequest = null;
+  }
 };
 
 export const switchSharedCamera = async (deviceId: string): Promise<HTMLVideoElement> => {
   try {
+    sharedVideoRequest = null;
     const nextStream = await requestCameraStream(deviceId);
     const nextVideo = await createVideoForStream(nextStream);
 
