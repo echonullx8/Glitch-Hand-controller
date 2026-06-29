@@ -4,6 +4,7 @@
 import React, { useEffect, useRef, useState } from 'react'; 
 import { useAppStore } from '../../store/useAppStore';
 import { midiService } from '../../services/midiService';
+import { subscribeRealtimeClock } from '../../utils/realtimeClock';
 
 // 本地定义类型
 type EffectType = 'None' | 'SimpleGlitch' | 'AnalogGlitch' | 'Particles' | 'Flash' | 'FaceParticles';
@@ -45,45 +46,29 @@ const DEFAULT_MAPPINGS: MidiMapping[] = [
 
 const MIDI_POLL_INTERVAL_MS = 33;
 
-// CompactMappingRow 组件保持不变
-const CompactMappingRow = ({ mapping, isSolo, onToggleSolo, deviceId, isMuted, anySoloActive }: any) => {
-  const handDataRef = useAppStore(state => state.handDataRef);
-  const barRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLSpanElement>(null);
-  const lastValRef = useRef<number>(-1);
+const getMappingValue = (mapping: MidiMapping, data: any) => {
+  if (mapping.hand === 'Global') {
+    return data[mapping.parameter] || 0;
+  }
 
-  useEffect(() => {
-    const loop = () => {
-      const data = handDataRef.current;
-      let val = 0;
-      if (mapping.hand === 'Global') {
-        // @ts-ignore
-        val = data[mapping.parameter] || 0;
-      } else {
-        const handObj = mapping.hand === 'Left' ? data.left : data.right;
-        // @ts-ignore
-        if (handObj) val = handObj[mapping.parameter] || 0;
-      }
-      if (barRef.current) barRef.current.style.width = `${Math.min(100, Math.max(0, val * 100))}%`;
-      const midiVal = Math.floor(mapping.min + (val * (mapping.max - mapping.min)));
-      if (textRef.current) textRef.current.innerText = midiVal.toString();
-      const shouldSend = !isMuted && (!anySoloActive || isSolo);
-      if (shouldSend && midiVal !== lastValRef.current) {
-          midiService.sendControlChange(deviceId, mapping.channel, mapping.cc, midiVal);
-          lastValRef.current = midiVal;
-      }
-    };
-    loop();
-    const intervalId = window.setInterval(loop, MIDI_POLL_INTERVAL_MS);
-    return () => window.clearInterval(intervalId);
-  }, [mapping, isSolo, deviceId, isMuted, anySoloActive]);
+  const handObj = mapping.hand === 'Left' ? data.left : data.right;
+  return handObj ? handObj[mapping.parameter] || 0 : 0;
+};
+
+const getMidiValue = (mapping: MidiMapping, val: number) => {
+  return Math.floor(mapping.min + (val * (mapping.max - mapping.min)));
+};
+
+// CompactMappingRow 组件保持不变
+const CompactMappingRow = ({ mapping, isSolo, onToggleSolo, value }: any) => {
+  const midiVal = getMidiValue(mapping, value);
 
   return (
     <div className="flex items-center gap-1 mb-1 h-5 group w-full">
       <div className="w-8 text-[9px] text-right font-mono text-white/60 group-hover:text-white uppercase truncate leading-none">{mapping.label}</div>
       <div className="flex-1 h-full bg-white/5 relative rounded-sm overflow-hidden border border-white/5">
-        <div ref={barRef} className={`absolute top-0 bottom-0 left-0 transition-all duration-75 ease-out ${isSolo ? 'bg-yellow-500' : 'bg-white/40'}`} style={{ width: '0%' }} />
-        <div className="absolute inset-0 flex items-center justify-start px-1"><span ref={textRef} className="text-[8px] font-mono text-white mix-blend-difference font-bold">0</span></div>
+        <div className={`absolute top-0 bottom-0 left-0 transition-all duration-75 ease-out ${isSolo ? 'bg-yellow-500' : 'bg-white/40'}`} style={{ width: `${Math.min(100, Math.max(0, value * 100))}%` }} />
+        <div className="absolute inset-0 flex items-center justify-start px-1"><span className="text-[8px] font-mono text-white mix-blend-difference font-bold">{midiVal}</span></div>
       </div>
       <button onClick={() => onToggleSolo(mapping.id)} className={`w-4 h-4 flex items-center justify-center rounded border text-[8px] font-bold transition-colors ${isSolo ? 'bg-yellow-500 border-yellow-500 text-black' : 'border-white/20 text-white/30 hover:border-white/50 hover:text-white'}`} title="Solo / Map">S</button>
     </div>
@@ -107,6 +92,8 @@ export const ControlPanel: React.FC = () => {
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const [soloMappingId, setSoloMappingId] = useState<string>('');
+  const [midiValues, setMidiValues] = useState<Record<string, number>>({});
+  const lastMidiValuesRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
       const getCameras = async () => {
@@ -121,6 +108,39 @@ export const ControlPanel: React.FC = () => {
       midiService.initialize().then(() => { midiService.onStateChange(setMidiDevices); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+      if (!visualConfig.showMidiPanel) return;
+
+      lastMidiValuesRef.current = {};
+
+      const loop = () => {
+          const data = useAppStore.getState().handDataRef.current;
+          const nextValues: Record<string, number> = {};
+
+          DEFAULT_MAPPINGS.forEach(mapping => {
+              const val = getMappingValue(mapping, data);
+              nextValues[mapping.id] = val;
+
+              const isMuted = mapping.hand === 'Left' ? muted.left : mapping.hand === 'Right' ? muted.right : false;
+              const isSolo = soloMappingId === mapping.id;
+              const shouldSend = !isMuted && (!soloMappingId || isSolo);
+              const midiVal = getMidiValue(mapping, val);
+
+              if (shouldSend && midiVal !== lastMidiValuesRef.current[mapping.id]) {
+                  midiService.sendControlChange(selectedMidiDevice, mapping.channel, mapping.cc, midiVal);
+                  lastMidiValuesRef.current[mapping.id] = midiVal;
+              }
+          });
+
+          if (document.visibilityState === 'visible') {
+              setMidiValues(nextValues);
+          }
+      };
+
+      loop();
+      return subscribeRealtimeClock(MIDI_POLL_INTERVAL_MS, loop);
+  }, [muted.left, muted.right, selectedMidiDevice, soloMappingId, visualConfig.showMidiPanel]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) { addVideoClip(e.target.files[0]); setMode('VJ_MODE'); }
@@ -301,7 +321,7 @@ export const ControlPanel: React.FC = () => {
                     <button onClick={() => setMuted(m => ({...m, left: !m.left}))} className={`text-[8px] px-1.5 rounded border ${muted.left ? 'border-red-500 text-red-500' : 'border-white/20 text-white/50'}`}>{muted.left ? 'MUTED' : 'ON'}</button>
                 </div>
                 {DEFAULT_MAPPINGS.filter(m => m.hand === 'Left').map(m => (
-                    <CompactMappingRow key={m.id} mapping={m} isSolo={soloMappingId === m.id} onToggleSolo={handleToggleSolo} deviceId={selectedMidiDevice} isMuted={muted.left} anySoloActive={!!soloMappingId} />
+                    <CompactMappingRow key={m.id} mapping={m} isSolo={soloMappingId === m.id} onToggleSolo={handleToggleSolo} value={midiValues[m.id] || 0} />
                 ))}
             </div>
 
@@ -311,12 +331,12 @@ export const ControlPanel: React.FC = () => {
                     <button onClick={() => setMuted(m => ({...m, right: !m.right}))} className={`text-[8px] px-1.5 rounded border ${muted.right ? 'border-red-500 text-red-500' : 'border-white/20 text-white/50'}`}>{muted.right ? 'MUTED' : 'ON'}</button>
                 </div>
                 {DEFAULT_MAPPINGS.filter(m => m.hand === 'Right').map(m => (
-                    <CompactMappingRow key={m.id} mapping={m} isSolo={soloMappingId === m.id} onToggleSolo={handleToggleSolo} deviceId={selectedMidiDevice} isMuted={muted.right} anySoloActive={!!soloMappingId} />
+                    <CompactMappingRow key={m.id} mapping={m} isSolo={soloMappingId === m.id} onToggleSolo={handleToggleSolo} value={midiValues[m.id] || 0} />
                 ))}
                 <div className="mt-4 border-t border-white/10 pt-2">
                 <div className="text-[10px] font-black text-yellow-500 mb-2">GLOBAL</div>
                 {DEFAULT_MAPPINGS.filter(m => m.hand === 'Global').map(m => (
-                    <CompactMappingRow key={m.id} mapping={m} isSolo={soloMappingId === m.id} onToggleSolo={handleToggleSolo} deviceId={selectedMidiDevice} isMuted={false} anySoloActive={!!soloMappingId} />
+                    <CompactMappingRow key={m.id} mapping={m} isSolo={soloMappingId === m.id} onToggleSolo={handleToggleSolo} value={midiValues[m.id] || 0} />
                 ))}
                 </div>
             </div>

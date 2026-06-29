@@ -7,6 +7,7 @@ import type { HandLandmarkerResult } from '@mediapipe/tasks-vision'; // 明确�
 // 使用别名导入单例服务
 import { initializeHands, getHandLandmarkerInstance } from '@/utils/mediaPipeService';
 import { getSharedCameraVideo } from '../../utils/cameraService';
+import { subscribeRealtimeClock } from '../../utils/realtimeClock';
 
 
 // --- 辅助函数 (保持不变) ---
@@ -28,6 +29,7 @@ export const HandTracker: React.FC = () => {
   const detectionCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isMounted = useRef(true);
   const requestRef = useRef<number>(0);
+  const stopClockRef = useRef<(() => void) | null>(null);
   const lastVideoTimeRef = useRef(-1);
 
   useEffect(() => {
@@ -44,7 +46,7 @@ export const HandTracker: React.FC = () => {
             
             await createVideoElement();
             startStream();
-            predictWebcam();
+            startDetectionLoop();
 
         } catch (error) {
             console.error("Failed to initialize shared MediaPipe service:", error);
@@ -52,14 +54,54 @@ export const HandTracker: React.FC = () => {
     };
 
     setupMediaPipe();
+    document.addEventListener('visibilitychange', startDetectionLoop);
 
     return () => {
         console.log("HandTracker: Unmount");
         isMounted.current = false;
+        stopDetectionLoop();
+        document.removeEventListener('visibilitychange', startDetectionLoop);
         if (requestRef.current) cancelAnimationFrame(requestRef.current);
+        stopClockRef.current?.();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, activeClipId]);
+
+  const stopDetectionLoop = () => {
+      const video = videoElementRef.current as (HTMLVideoElement & {
+          cancelVideoFrameCallback?: (id: number) => void;
+      }) | null;
+
+      if (requestRef.current) {
+          video?.cancelVideoFrameCallback?.(requestRef.current);
+          cancelAnimationFrame(requestRef.current);
+          requestRef.current = 0;
+      }
+      stopClockRef.current?.();
+      stopClockRef.current = null;
+  };
+
+  const startDetectionLoop = () => {
+      stopDetectionLoop();
+
+      const video = videoElementRef.current as (HTMLVideoElement & {
+          requestVideoFrameCallback?: (callback: () => void) => number;
+          cancelVideoFrameCallback?: (id: number) => void;
+      }) | null;
+
+      if (document.visibilityState === 'visible' && video?.requestVideoFrameCallback) {
+          const onVideoFrame = () => {
+              predictWebcam();
+              if (isMounted.current) {
+                  requestRef.current = video.requestVideoFrameCallback!(onVideoFrame);
+              }
+          };
+          requestRef.current = video.requestVideoFrameCallback(onVideoFrame);
+          return;
+      }
+
+      stopClockRef.current = subscribeRealtimeClock(33, predictWebcam);
+  };
 
   const createVideoElement = async () => {
       if (!videoElementRef.current) {
@@ -89,7 +131,7 @@ export const HandTracker: React.FC = () => {
         }
     };
 
-  const predictWebcam = async () => {
+  const predictWebcam = () => {
       if (!isMounted.current || !videoElementRef.current) return;
       const video = videoElementRef.current;
       const canvas = detectionCanvasRef.current;
@@ -108,9 +150,6 @@ export const HandTracker: React.FC = () => {
           } catch(e) {
               // console.warn("Prediction skipped:", e);
           }
-      }
-      if (isMounted.current) {
-          requestRef.current = requestAnimationFrame(predictWebcam);
       }
   };
 
