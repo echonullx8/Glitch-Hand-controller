@@ -6,7 +6,7 @@ import { useAppStore } from '../../store/useAppStore';
 import type { HandLandmarkerResult } from '@mediapipe/tasks-vision'; // 明确标示为类型导入
 // 使用别名导入单例服务
 import { initializeHands, getHandLandmarkerInstance } from '@/utils/mediaPipeService';
-import { getSharedCameraVideo } from '../../utils/cameraService';
+import { getSharedCameraVideo, subscribeSharedCameraChange } from '../../utils/cameraService';
 import { subscribeRealtimeClock } from '../../utils/realtimeClock';
 
 
@@ -35,6 +35,7 @@ export const HandTracker: React.FC = () => {
   const smoothedDetectionFpsRef = useRef(0);
   const smoothedCameraFpsRef = useRef(0);
   const loopModeRef = useRef('idle');
+  const isReadyRef = useRef(false);
 
   useEffect(() => {
     isMounted.current = true;
@@ -49,6 +50,7 @@ export const HandTracker: React.FC = () => {
             console.log("HandTracker received shared Hands instance. Starting stream...");
             
             await createVideoElement();
+            isReadyRef.current = true;
             startStream();
             startDetectionLoop();
 
@@ -58,11 +60,29 @@ export const HandTracker: React.FC = () => {
     };
 
     setupMediaPipe();
+    const handleCameraChange = async () => {
+        if (!isMounted.current || !isReadyRef.current) return;
+
+        try {
+            stopDetectionLoop();
+            videoElementRef.current = await getSharedCameraVideo();
+            lastVideoTimeRef.current = -1;
+            smoothedCameraFpsRef.current = 0;
+            smoothedDetectionFpsRef.current = 0;
+            startDetectionLoop();
+        } catch (error) {
+            console.error("HandTracker failed to attach switched camera:", error);
+        }
+    };
+
+    const unsubscribeCameraChange = subscribeSharedCameraChange(handleCameraChange);
     document.addEventListener('visibilitychange', startDetectionLoop);
 
     return () => {
         console.log("HandTracker: Unmount");
         isMounted.current = false;
+        isReadyRef.current = false;
+        unsubscribeCameraChange();
         stopDetectionLoop();
         document.removeEventListener('visibilitychange', startDetectionLoop);
         if (requestRef.current) cancelAnimationFrame(requestRef.current);
