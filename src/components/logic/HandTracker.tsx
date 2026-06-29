@@ -31,6 +31,10 @@ export const HandTracker: React.FC = () => {
   const requestRef = useRef<number>(0);
   const stopClockRef = useRef<(() => void) | null>(null);
   const lastVideoTimeRef = useRef(-1);
+  const lastDetectAtRef = useRef(0);
+  const smoothedDetectionFpsRef = useRef(0);
+  const smoothedCameraFpsRef = useRef(0);
+  const loopModeRef = useRef('idle');
 
   useEffect(() => {
     isMounted.current = true;
@@ -90,6 +94,7 @@ export const HandTracker: React.FC = () => {
       }) | null;
 
       if (document.visibilityState === 'visible' && video?.requestVideoFrameCallback) {
+          loopModeRef.current = 'video-frame';
           const onVideoFrame = () => {
               predictWebcam();
               if (isMounted.current) {
@@ -100,6 +105,7 @@ export const HandTracker: React.FC = () => {
           return;
       }
 
+      loopModeRef.current = 'worker';
       stopClockRef.current = subscribeRealtimeClock(33, predictWebcam);
   };
 
@@ -137,6 +143,7 @@ export const HandTracker: React.FC = () => {
       const canvas = detectionCanvasRef.current;
 
       if (video.readyState >= 2 && canvas && video.currentTime !== lastVideoTimeRef.current) {
+          const previousVideoTime = lastVideoTimeRef.current;
           lastVideoTimeRef.current = video.currentTime;
           try {
               const ctx = canvas.getContext('2d', { alpha: false });
@@ -146,11 +153,37 @@ export const HandTracker: React.FC = () => {
               const landmarker = getHandLandmarkerInstance();
               const startTimeMs = performance.now();
               const results = landmarker.detectForVideo(canvas, startTimeMs);
+              const endTimeMs = performance.now();
+              updateDiagnostics(video, previousVideoTime, startTimeMs, endTimeMs);
               processResults(results);
           } catch(e) {
               // console.warn("Prediction skipped:", e);
           }
       }
+  };
+
+  const updateDiagnostics = (video: HTMLVideoElement, previousVideoTime: number, startTimeMs: number, endTimeMs: number) => {
+      const currentData = handDataRef.current;
+      const videoDelta = previousVideoTime >= 0 ? video.currentTime - previousVideoTime : 0;
+      const cameraFps = videoDelta > 0 ? 1 / videoDelta : smoothedCameraFpsRef.current;
+      const detectDelta = lastDetectAtRef.current ? startTimeMs - lastDetectAtRef.current : 0;
+      const detectionFps = detectDelta > 0 ? 1000 / detectDelta : smoothedDetectionFpsRef.current;
+
+      smoothedCameraFpsRef.current = smoothedCameraFpsRef.current
+          ? (smoothedCameraFpsRef.current * 0.85) + (cameraFps * 0.15)
+          : cameraFps;
+      smoothedDetectionFpsRef.current = smoothedDetectionFpsRef.current
+          ? (smoothedDetectionFpsRef.current * 0.85) + (detectionFps * 0.15)
+          : detectionFps;
+      lastDetectAtRef.current = startTimeMs;
+
+      currentData.diagnostics.cameraWidth = video.videoWidth || 0;
+      currentData.diagnostics.cameraHeight = video.videoHeight || 0;
+      currentData.diagnostics.cameraFps = smoothedCameraFpsRef.current || 0;
+      currentData.diagnostics.detectionFps = smoothedDetectionFpsRef.current || 0;
+      currentData.diagnostics.detectionMs = endTimeMs - startTimeMs;
+      currentData.diagnostics.loopMode = loopModeRef.current;
+      currentData.diagnostics.lastFrameAt = endTimeMs;
   };
 
   // --- 完整的 processResults 函数 ---

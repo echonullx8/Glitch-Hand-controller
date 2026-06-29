@@ -1,19 +1,30 @@
 let sharedStream: MediaStream | null = null;
 let sharedVideo: HTMLVideoElement | null = null;
+let activeDeviceId = '';
 
-const CAMERA_CONSTRAINTS: MediaStreamConstraints = {
+const getCameraConstraints = (deviceId = ''): MediaStreamConstraints => ({
   audio: false,
   video: {
+    ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
     width: { ideal: 1280 },
     height: { ideal: 720 },
     frameRate: { ideal: 60, max: 60 }
   }
-};
+});
 
-export const getSharedCameraStream = async (): Promise<MediaStream> => {
-  if (sharedStream) return sharedStream;
+export const getSharedCameraStream = async (deviceId = activeDeviceId): Promise<MediaStream> => {
+  if (sharedStream && deviceId === activeDeviceId) return sharedStream;
 
-  sharedStream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS);
+  const nextStream = await navigator.mediaDevices.getUserMedia(getCameraConstraints(deviceId));
+  sharedStream?.getTracks().forEach(track => track.stop());
+  sharedStream = nextStream;
+  activeDeviceId = deviceId;
+
+  if (sharedVideo) {
+    sharedVideo.srcObject = sharedStream;
+    await sharedVideo.play();
+  }
+
   return sharedStream;
 };
 
@@ -30,4 +41,9 @@ export const getSharedCameraVideo = async (): Promise<HTMLVideoElement> => {
 
   sharedVideo = video;
   return sharedVideo;
+};
+
+export const switchSharedCamera = async (deviceId: string): Promise<HTMLVideoElement> => {
+  await getSharedCameraStream(deviceId);
+  return getSharedCameraVideo();
 };

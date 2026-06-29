@@ -29,6 +29,15 @@ export interface HandData {
   rightPresent: number;
   bothPresent: number;
   lastUpdated: number;
+  diagnostics: {
+    cameraWidth: number;
+    cameraHeight: number;
+    cameraFps: number;
+    detectionFps: number;
+    detectionMs: number;
+    loopMode: string;
+    lastFrameAt: number;
+  };
 }
 
 export type EffectType = 'None' | 'SimpleGlitch' | 'AnalogGlitch' | 'Particles' | 'Flash' | 'Ascii';
@@ -181,7 +190,16 @@ export const useAppStore = create<AppState>()(
           left: null, right: null, face: null,
           sealActive: false, sealSize: 0, thumbsDist: 1, indexDist: 1,
           leftPresent: 0, rightPresent: 0, bothPresent: 0,
-          lastUpdated: 0
+          lastUpdated: 0,
+          diagnostics: {
+            cameraWidth: 0,
+            cameraHeight: 0,
+            cameraFps: 0,
+            detectionFps: 0,
+            detectionMs: 0,
+            loopMode: 'idle',
+            lastFrameAt: 0
+          }
         }
       },
 

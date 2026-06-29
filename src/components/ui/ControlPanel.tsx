@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { midiService } from '../../services/midiService';
 import { subscribeRealtimeClock } from '../../utils/realtimeClock';
+import { switchSharedCamera } from '../../utils/cameraService';
 
 // 本地定义类型
 type EffectType = 'None' | 'SimpleGlitch' | 'AnalogGlitch' | 'Particles' | 'Flash' | 'FaceParticles';
@@ -14,6 +15,18 @@ interface MidiMapping {
   id: string; hand: HandSide | 'Global'; parameter: string; cc: number; channel: number; label: string; min: number; max: number;
 }
 interface MidiDevice { id: string; name: string; }
+interface DiagnosticsSnapshot {
+  cameraWidth: number;
+  cameraHeight: number;
+  cameraFps: number;
+  detectionFps: number;
+  detectionMs: number;
+  loopMode: string;
+  dataAgeMs: number;
+  leftPresent: number;
+  rightPresent: number;
+  bothPresent: number;
+}
 
 const SOURCES = [
     'None',
@@ -45,6 +58,7 @@ const DEFAULT_MAPPINGS: MidiMapping[] = [
 ];
 
 const MIDI_POLL_INTERVAL_MS = 33;
+const DIAGNOSTICS_POLL_INTERVAL_MS = 250;
 
 const getMappingValue = (mapping: MidiMapping, data: any) => {
   if (mapping.hand === 'Global') {
@@ -77,6 +91,30 @@ const CompactMappingRow = ({ mapping, isSolo, onToggleSolo, value }: any) => {
 
 const EFFECT_TYPES: EffectType[] = ['None', 'SimpleGlitch', 'AnalogGlitch', 'Particles', 'FaceParticles', 'Flash'];
 
+const DiagnosticsPanel = ({ data }: { data: DiagnosticsSnapshot }) => {
+  const fmt = (value: number, digits = 1) => Number.isFinite(value) ? value.toFixed(digits) : '0.0';
+
+  return (
+    <div className="absolute top-16 left-1/2 -translate-x-1/2 w-64 bg-black/75 backdrop-blur-sm border border-[#00FF7F]/30 rounded p-2 z-50 pointer-events-none font-mono">
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-[10px] text-[#00FF7F] font-black">DIAGNOSTICS</span>
+        <span className="text-[8px] text-white/40">{data.loopMode}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-white/70">
+        <span>CAM RES</span><span className="text-right text-white">{data.cameraWidth}x{data.cameraHeight}</span>
+        <span>CAM FPS</span><span className="text-right text-white">{fmt(data.cameraFps)}</span>
+        <span>DETECT FPS</span><span className="text-right text-white">{fmt(data.detectionFps)}</span>
+        <span>DETECT MS</span><span className="text-right text-white">{fmt(data.detectionMs, 2)}</span>
+        <span>DATA AGE</span><span className="text-right text-white">{fmt(data.dataAgeMs, 0)} ms</span>
+        <span>HANDS</span><span className="text-right text-white">L{data.leftPresent} R{data.rightPresent} B{data.bothPresent}</span>
+      </div>
+      <div className="mt-2 text-[8px] text-white/35 leading-tight">
+        DATA AGE 是网页内部识别数据的新鲜度，不等于真实摄像头物理延迟。
+      </div>
+    </div>
+  );
+};
+
 export const ControlPanel: React.FC = () => {
   const {
     mode, setMode, addVideoClip, videoClips, selectVideoClip, activeClipId, removeVideoClip,
@@ -93,6 +131,19 @@ export const ControlPanel: React.FC = () => {
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const [soloMappingId, setSoloMappingId] = useState<string>('');
   const [midiValues, setMidiValues] = useState<Record<string, number>>({});
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsSnapshot>({
+      cameraWidth: 0,
+      cameraHeight: 0,
+      cameraFps: 0,
+      detectionFps: 0,
+      detectionMs: 0,
+      loopMode: 'idle',
+      dataAgeMs: 0,
+      leftPresent: 0,
+      rightPresent: 0,
+      bothPresent: 0
+  });
   const lastMidiValuesRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
@@ -142,6 +193,30 @@ export const ControlPanel: React.FC = () => {
       return subscribeRealtimeClock(MIDI_POLL_INTERVAL_MS, loop);
   }, [muted.left, muted.right, selectedMidiDevice, soloMappingId, visualConfig.showMidiPanel]);
 
+  useEffect(() => {
+      if (!showDiagnostics) return;
+
+      const updateDiagnostics = () => {
+          const data = useAppStore.getState().handDataRef.current;
+          setDiagnostics({
+              cameraWidth: data.diagnostics.cameraWidth,
+              cameraHeight: data.diagnostics.cameraHeight,
+              cameraFps: data.diagnostics.cameraFps,
+              detectionFps: data.diagnostics.detectionFps,
+              detectionMs: data.diagnostics.detectionMs,
+              loopMode: data.diagnostics.loopMode,
+              dataAgeMs: data.lastUpdated ? Math.max(0, performance.now() - data.lastUpdated) : 0,
+              leftPresent: data.leftPresent,
+              rightPresent: data.rightPresent,
+              bothPresent: data.bothPresent
+          });
+      };
+
+      updateDiagnostics();
+      const intervalId = window.setInterval(updateDiagnostics, DIAGNOSTICS_POLL_INTERVAL_MS);
+      return () => window.clearInterval(intervalId);
+  }, [showDiagnostics]);
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) { addVideoClip(e.target.files[0]); setMode('VJ_MODE'); }
   };
@@ -150,6 +225,15 @@ export const ControlPanel: React.FC = () => {
 
   const handleToggleSolo = (id: string) => {
       setSoloMappingId(prev => prev === id ? '' : id);
+  };
+
+  const handleCameraChange = async (deviceId: string) => {
+      try {
+          await switchSharedCamera(deviceId);
+          setSelectedCameraId(deviceId);
+      } catch (error) {
+          console.error('Could not switch camera.', error);
+      }
   };
 
   const toggleFullScreen = () => {
@@ -223,7 +307,7 @@ export const ControlPanel: React.FC = () => {
           </select>
 
           {mode === 'LIVE_AR' && (
-              <select value={selectedCameraId} onChange={(e) => setSelectedCameraId(e.target.value)} className="bg-black border border-white/20 text-[9px] rounded px-1 outline-none h-6 w-24 text-white">
+              <select value={selectedCameraId} onChange={(e) => handleCameraChange(e.target.value)} className="bg-black border border-white/20 text-[9px] rounded px-1 outline-none h-6 w-24 text-white">
                     {videoDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label || 'Camera'}</option>)}
               </select>
           )}
@@ -240,9 +324,13 @@ export const ControlPanel: React.FC = () => {
           {/* MIDI 开关 */}
           <button onClick={() => setVisualConfig({ showMidiPanel: !visualConfig.showMidiPanel })} className={`text-[9px] px-2 py-1 rounded border ${visualConfig.showMidiPanel ? 'bg-blue-500 border-blue-500' : 'border-white/20'}`}>MIDI</button>
 
+          <button onClick={() => setShowDiagnostics(v => !v)} className={`text-[9px] px-2 py-1 rounded border ${showDiagnostics ? 'bg-[#00FF7F] border-[#00FF7F] text-black' : 'border-white/20'}`}>DIAG</button>
+
           <button onClick={() => setShowSettings(!showSettings)} className={`text-lg ${showSettings ? 'text-[#00FF7F]' : 'text-white'}`}>⚙️</button>
         </div>
       </div>
+
+      {showDiagnostics && <DiagnosticsPanel data={diagnostics} />}
 
       {/* BOTTOM SETTINGS PANEL */}
       {showSettings && (
