@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import * as THREE from 'three';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useAppStore } from '../../store/useAppStore';
-import { getSharedCameraVideo, subscribeSharedCameraChange } from '../../utils/cameraService';
+import { getSharedCameraVideo } from '../../utils/cameraService';
 
 export const Background: React.FC = () => {
   const { viewport, camera } = useThree();
@@ -13,7 +13,6 @@ export const Background: React.FC = () => {
   } = useAppStore();
   
   const [videoTexture, setVideoTexture] = useState<THREE.VideoTexture | null>(null);
-  const [cameraRevision, setCameraRevision] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const meshRef = useRef<THREE.Mesh>(null);
 
@@ -21,10 +20,6 @@ export const Background: React.FC = () => {
   const vFov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
   const visibleHeight = 2 * Math.tan(vFov / 2) * bgDistance;
   const visibleWidth = visibleHeight * viewport.aspect;
-
-  useEffect(() => {
-    return subscribeSharedCameraChange(() => setCameraRevision(revision => revision + 1));
-  }, []);
 
   useEffect(() => {
     let video: HTMLVideoElement | null = null;
@@ -84,7 +79,7 @@ export const Background: React.FC = () => {
       }
       texture?.dispose();
     };
-  }, [mode, activeClipId, setGlobalVideoTexture, cameraRevision]);
+  }, [mode, activeClipId, setGlobalVideoTexture]);
 
   // 【暴力修正】每帧直接修改 Mesh Scale (保持不变)
   useFrame(() => {
