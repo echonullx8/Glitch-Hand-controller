@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import * as THREE from 'three';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useAppStore } from '../../store/useAppStore';
-import { getSharedCameraVideo } from '../../utils/cameraService';
+import { getSharedCameraVideo, subscribeSharedCameraChange } from '../../utils/cameraService';
 
 export const Background: React.FC = () => {
   const { viewport, camera } = useThree();
@@ -13,6 +13,7 @@ export const Background: React.FC = () => {
   } = useAppStore();
   
   const [videoTexture, setVideoTexture] = useState<THREE.VideoTexture | null>(null);
+  const [cameraRevision, setCameraRevision] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const meshRef = useRef<THREE.Mesh>(null);
 
@@ -22,8 +23,13 @@ export const Background: React.FC = () => {
   const visibleWidth = visibleHeight * viewport.aspect;
 
   useEffect(() => {
+    return subscribeSharedCameraChange(() => setCameraRevision(revision => revision + 1));
+  }, []);
+
+  useEffect(() => {
     let video: HTMLVideoElement | null = null;
     let isCancelled = false;
+    let texture: THREE.VideoTexture | null = null;
 
     const localVideo = document.createElement('video');
     video = localVideo;
@@ -57,11 +63,14 @@ export const Background: React.FC = () => {
       if (isCancelled || !video) return;
       video.play().catch(() => {});
       
-      const texture = new THREE.VideoTexture(video);
+      texture = new THREE.VideoTexture(video);
       texture.minFilter = THREE.LinearFilter;
       texture.magFilter = THREE.LinearFilter;
       
-      setVideoTexture(texture);
+      setVideoTexture(previousTexture => {
+        previousTexture?.dispose();
+        return texture;
+      });
       setGlobalVideoTexture(texture);
     };
 
@@ -73,8 +82,9 @@ export const Background: React.FC = () => {
         video.pause();
         video.remove();
       }
+      texture?.dispose();
     };
-  }, [mode, activeClipId, setGlobalVideoTexture]);
+  }, [mode, activeClipId, setGlobalVideoTexture, cameraRevision]);
 
   // 【暴力修正】每帧直接修改 Mesh Scale (保持不变)
   useFrame(() => {

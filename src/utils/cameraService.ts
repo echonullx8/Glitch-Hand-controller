@@ -1,14 +1,15 @@
 let sharedStream: MediaStream | null = null;
 let sharedVideo: HTMLVideoElement | null = null;
 let activeDeviceId = '';
+const cameraChangeListeners = new Set<() => void>();
 
 const getCameraConstraints = (deviceId = '', exactDevice = true): MediaStreamConstraints => ({
   audio: false,
   video: {
     ...(deviceId ? { deviceId: exactDevice ? { exact: deviceId } : { ideal: deviceId } } : {}),
-    width: { ideal: 1280 },
-    height: { ideal: 720 },
-    frameRate: { ideal: 60, max: 60 }
+    width: { ideal: 1920 },
+    height: { ideal: 1080 },
+    frameRate: { ideal: 60 }
   }
 });
 
@@ -42,6 +43,7 @@ export const getSharedCameraStream = async (deviceId = activeDeviceId): Promise<
     await sharedVideo.play();
   }
 
+  cameraChangeListeners.forEach(listener => listener());
   return sharedStream;
 };
 
@@ -63,4 +65,9 @@ export const getSharedCameraVideo = async (): Promise<HTMLVideoElement> => {
 export const switchSharedCamera = async (deviceId: string): Promise<HTMLVideoElement> => {
   await getSharedCameraStream(deviceId);
   return getSharedCameraVideo();
+};
+
+export const subscribeSharedCameraChange = (listener: () => void) => {
+  cameraChangeListeners.add(listener);
+  return () => cameraChangeListeners.delete(listener);
 };
