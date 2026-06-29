@@ -2,20 +2,37 @@ let sharedStream: MediaStream | null = null;
 let sharedVideo: HTMLVideoElement | null = null;
 let activeDeviceId = '';
 
-const getCameraConstraints = (deviceId = ''): MediaStreamConstraints => ({
+const getCameraConstraints = (deviceId = '', exactDevice = true): MediaStreamConstraints => ({
   audio: false,
   video: {
-    ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+    ...(deviceId ? { deviceId: exactDevice ? { exact: deviceId } : { ideal: deviceId } } : {}),
     width: { ideal: 1280 },
     height: { ideal: 720 },
     frameRate: { ideal: 60, max: 60 }
   }
 });
 
+const requestCameraStream = async (deviceId = ''): Promise<MediaStream> => {
+  try {
+    return await navigator.mediaDevices.getUserMedia(getCameraConstraints(deviceId, true));
+  } catch (exactError) {
+    if (!deviceId) {
+      return navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+    }
+
+    try {
+      return await navigator.mediaDevices.getUserMedia(getCameraConstraints(deviceId, false));
+    } catch (idealError) {
+      console.warn('Camera device constraints failed.', exactError, idealError);
+      throw idealError;
+    }
+  }
+};
+
 export const getSharedCameraStream = async (deviceId = activeDeviceId): Promise<MediaStream> => {
   if (sharedStream && deviceId === activeDeviceId) return sharedStream;
 
-  const nextStream = await navigator.mediaDevices.getUserMedia(getCameraConstraints(deviceId));
+  const nextStream = await requestCameraStream(deviceId);
   sharedStream?.getTracks().forEach(track => track.stop());
   sharedStream = nextStream;
   activeDeviceId = deviceId;
