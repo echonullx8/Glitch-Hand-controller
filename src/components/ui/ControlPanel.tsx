@@ -79,36 +79,40 @@ const CompactMappingRow = ({ mapping, isSolo, onToggleSolo, value }: any) => {
 
   return (
     <div className="flex items-center gap-1 mb-1 h-5 group w-full">
-      <div className="w-8 text-[9px] text-right font-mono text-white/60 group-hover:text-white uppercase truncate leading-none">{mapping.label}</div>
-      <div className="flex-1 h-full bg-white/5 relative rounded-sm overflow-hidden border border-white/5">
-        <div className={`absolute top-0 bottom-0 left-0 transition-all duration-75 ease-out ${isSolo ? 'bg-yellow-500' : 'bg-white/40'}`} style={{ width: `${Math.min(100, Math.max(0, value * 100))}%` }} />
+      <div className="w-8 text-[9px] text-right font-mono text-slate-400 group-hover:text-slate-100 uppercase truncate leading-none">{mapping.label}</div>
+      <div className="flex-1 h-full bg-slate-950/55 relative rounded-sm overflow-hidden border border-slate-200/10">
+        <div className={`absolute top-0 bottom-0 left-0 transition-all duration-75 ease-out ${isSolo ? 'bg-cyan-200' : 'bg-slate-200/35'}`} style={{ width: `${Math.min(100, Math.max(0, value * 100))}%` }} />
         <div className="absolute inset-0 flex items-center justify-start px-1"><span className="text-[8px] font-mono text-white mix-blend-difference font-bold">{midiVal}</span></div>
       </div>
-      <button onClick={() => onToggleSolo(mapping.id)} className={`w-4 h-4 flex items-center justify-center rounded border text-[8px] font-bold transition-colors ${isSolo ? 'bg-yellow-500 border-yellow-500 text-black' : 'border-white/20 text-white/30 hover:border-white/50 hover:text-white'}`} title="Solo / Map">S</button>
+      <button onClick={() => onToggleSolo(mapping.id)} className={`w-4 h-4 flex items-center justify-center rounded border text-[8px] font-bold transition-colors ${isSolo ? ACTIVE_CHROME : INACTIVE_CHROME}`} title="Solo / Map">S</button>
     </div>
   );
 };
 
 const EFFECT_TYPES: EffectType[] = ['None', 'SimpleGlitch', 'AnalogGlitch', 'Particles', 'FaceParticles', 'Flash'];
+const GLASS_PANEL = 'bg-slate-950/55 backdrop-blur-xl border border-slate-200/10 shadow-[0_18px_60px_rgba(3,7,18,0.45)]';
+const CONTROL_FIELD = 'bg-slate-950/60 border border-slate-200/10 text-slate-100 shadow-inner shadow-black/30 focus:border-cyan-200/50 focus:outline-none';
+const ACTIVE_CHROME = 'bg-cyan-200/12 text-cyan-50 border-cyan-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_0_20px_rgba(103,232,249,0.16)]';
+const INACTIVE_CHROME = 'border-slate-200/10 text-slate-300/70 hover:border-cyan-200/30 hover:bg-cyan-200/10 hover:text-slate-100';
 
 const DiagnosticsPanel = ({ data }: { data: DiagnosticsSnapshot }) => {
   const fmt = (value: number, digits = 1) => Number.isFinite(value) ? value.toFixed(digits) : '0.0';
 
   return (
-    <div className="absolute top-16 left-1/2 -translate-x-1/2 w-64 bg-black/75 backdrop-blur-sm border border-[#00FF7F]/30 rounded p-2 z-50 pointer-events-none font-mono">
+    <div className={`absolute top-16 left-1/2 -translate-x-1/2 w-64 ${GLASS_PANEL} rounded-md p-2 z-50 pointer-events-none font-mono`}>
       <div className="flex justify-between items-center mb-1">
-        <span className="text-[10px] text-[#00FF7F] font-black">DIAGNOSTICS</span>
-        <span className="text-[8px] text-white/40">{data.loopMode}</span>
+        <span className="text-[10px] text-cyan-100 font-black tracking-[0.18em]">DIAGNOSTICS</span>
+        <span className="text-[8px] text-slate-400">{data.loopMode}</span>
       </div>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-white/70">
-        <span>CAM RES</span><span className="text-right text-white">{data.cameraWidth}x{data.cameraHeight}</span>
-        <span>CAM FPS</span><span className="text-right text-white">{fmt(data.cameraFps)}</span>
-        <span>DETECT FPS</span><span className="text-right text-white">{fmt(data.detectionFps)}</span>
-        <span>DETECT MS</span><span className="text-right text-white">{fmt(data.detectionMs, 2)}</span>
-        <span>DATA AGE</span><span className="text-right text-white">{fmt(data.dataAgeMs, 0)} ms</span>
-        <span>HANDS</span><span className="text-right text-white">L{data.leftPresent} R{data.rightPresent} B{data.bothPresent}</span>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-slate-300/75">
+        <span>CAM RES</span><span className="text-right text-slate-50">{data.cameraWidth}x{data.cameraHeight}</span>
+        <span>CAM FPS</span><span className="text-right text-slate-50">{fmt(data.cameraFps)}</span>
+        <span>DETECT FPS</span><span className="text-right text-slate-50">{fmt(data.detectionFps)}</span>
+        <span>DETECT MS</span><span className="text-right text-slate-50">{fmt(data.detectionMs, 2)}</span>
+        <span>DATA AGE</span><span className="text-right text-slate-50">{fmt(data.dataAgeMs, 0)} ms</span>
+        <span>HANDS</span><span className="text-right text-slate-50">L{data.leftPresent} R{data.rightPresent} B{data.bothPresent}</span>
       </div>
-      <div className="mt-2 text-[8px] text-white/35 leading-tight">
+      <div className="mt-2 text-[8px] text-slate-400/80 leading-tight">
         DATA AGE 是网页内部识别数据的新鲜度，不等于真实摄像头物理延迟。
       </div>
     </div>
@@ -279,13 +283,13 @@ export const ControlPanel: React.FC = () => {
                 <select
                     value={activeSlot.params.amountSource}
                     onChange={(e) => updateSlotParams(activeSlotIndex, { amountSource: e.target.value })}
-                    className="bg-black border border-white/20 text-[9px] w-20 h-5"
+                    className={`${CONTROL_FIELD} text-[9px] w-20 h-5 rounded-sm px-1`}
                 >
                     {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <button
                     onClick={() => updateSlotParams(activeSlotIndex, { amountInvert: !activeSlot.params.amountInvert })}
-                    className={`text-[8px] px-1 h-5 border ${activeSlot.params.amountInvert ? 'bg-blue-500' : 'border-white/20 text-white/50'}`}
+                    className={`text-[8px] px-1 h-5 rounded-sm border ${activeSlot.params.amountInvert ? ACTIVE_CHROME : INACTIVE_CHROME}`}
                 >INV</button>
             </div>
 
@@ -295,13 +299,13 @@ export const ControlPanel: React.FC = () => {
                     <select
                         value={activeSlot.params.speedSource}
                         onChange={(e) => updateSlotParams(activeSlotIndex, { speedSource: e.target.value })}
-                        className="bg-black border border-white/20 text-[9px] w-20 h-5"
+                        className={`${CONTROL_FIELD} text-[9px] w-20 h-5 rounded-sm px-1`}
                     >
                         {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                     <button
                         onClick={() => updateSlotParams(activeSlotIndex, { speedInvert: !activeSlot.params.speedInvert })}
-                        className={`text-[8px] px-1 h-5 border ${activeSlot.params.speedInvert ? 'bg-blue-500' : 'border-white/20 text-white/50'}`}
+                        className={`text-[8px] px-1 h-5 rounded-sm border ${activeSlot.params.speedInvert ? ACTIVE_CHROME : INACTIVE_CHROME}`}
                     >INV</button>
                 </div>
             )}
@@ -310,43 +314,44 @@ export const ControlPanel: React.FC = () => {
   };
 
   return (
-    <div className="absolute inset-0 pointer-events-none">
+    <div className="absolute inset-0 pointer-events-none text-slate-100">
+      <div className="absolute inset-x-0 -top-24 h-72 bg-[radial-gradient(ellipse_at_18%_12%,rgba(125,211,252,0.18),rgba(15,23,42,0.08)_38%,transparent_72%)] blur-2xl pointer-events-none" />
       {/* TOP BAR */}
-      <div className="absolute top-0 left-0 w-full h-12 bg-black/80 backdrop-blur border-b border-white/10 flex items-center px-4 justify-between z-50 pointer-events-auto">
-        <div className="text-xs font-bold tracking-widest text-[#00FF7F]">HAND-OSC // V2</div>
+      <div className="absolute top-0 left-0 w-full h-12 bg-slate-950/55 backdrop-blur-xl border-b border-slate-200/10 shadow-[0_10px_50px_rgba(2,6,23,0.35)] flex items-center px-4 justify-between z-50 pointer-events-auto">
+        <div className="text-xs font-semibold tracking-[0.32em] text-slate-100">HAND CONTROLLER</div>
         <div className="flex gap-2 items-center">
-          <div className="flex bg-white/10 rounded p-1 gap-1 mr-2">
-            <button onClick={() => setMode('LIVE_AR')} className={`px-3 py-1 text-xs rounded ${mode === 'LIVE_AR' ? 'bg-[#00FF7F] text-black' : 'text-white/50'}`}>LIVE AR</button>
-            <button onClick={() => setMode('VJ_MODE')} className={`px-3 py-1 text-xs rounded ${mode === 'VJ_MODE' ? 'bg-cyan-400 text-black' : 'text-white/50'}`}>VJ MODE</button>
+          <div className="flex bg-slate-900/70 rounded-md p-1 gap-1 mr-2 border border-slate-200/10 shadow-inner shadow-black/30">
+            <button onClick={() => setMode('LIVE_AR')} className={`px-3 py-1 text-xs rounded ${mode === 'LIVE_AR' ? ACTIVE_CHROME : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'}`}>LIVE AR</button>
+            <button onClick={() => setMode('VJ_MODE')} className={`px-3 py-1 text-xs rounded ${mode === 'VJ_MODE' ? ACTIVE_CHROME : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'}`}>VJ MODE</button>
           </div>
           
-          <select value={selectedMidiDevice} onChange={(e) => setSelectedMidiDevice(e.target.value)} className="bg-black border border-white/20 text-[9px] rounded px-1 outline-none h-6 w-24 text-white">
+          <select value={selectedMidiDevice} onChange={(e) => setSelectedMidiDevice(e.target.value)} className={`${CONTROL_FIELD} text-[9px] rounded px-1 h-6 w-24`}>
                 <option value="all">All MIDI</option>
                 {midiDevices.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
 
           {mode === 'LIVE_AR' && (
-              <select value={selectedCameraId} disabled={isLoadingCameras} onChange={(e) => handleCameraChange(e.target.value)} className="bg-black border border-white/20 text-[9px] rounded px-1 outline-none h-6 w-28 text-white disabled:opacity-50">
+              <select value={selectedCameraId} disabled={isLoadingCameras} onChange={(e) => handleCameraChange(e.target.value)} className={`${CONTROL_FIELD} text-[9px] rounded px-1 h-6 w-28 disabled:opacity-50`}>
                     {isLoadingCameras && <option value="">Detecting...</option>}
                     {videoDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label || 'Camera'}</option>)}
               </select>
           )}
 
-          <div className="w-px h-6 bg-white/20 mx-2"></div>
+          <div className="w-px h-6 bg-slate-200/10 mx-2"></div>
           
           <div className="relative overflow-hidden">
-            <button className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-xs border border-white/20">+ IMPORT</button>
+            <button className="px-3 py-1 bg-slate-900/60 hover:bg-cyan-200/10 rounded text-xs border border-slate-200/10 hover:border-cyan-200/30 text-slate-200">+ IMPORT</button>
             <input type="file" accept="video/*" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
           </div>
           
-          <button onClick={toggleFullScreen} className="text-[9px] px-2 py-1 rounded border border-white/20 hover:bg-white/10 text-white">FULL</button>
+          <button onClick={toggleFullScreen} className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>FULL</button>
           
           {/* MIDI 开关 */}
-          <button onClick={() => setVisualConfig({ showMidiPanel: !visualConfig.showMidiPanel })} className={`text-[9px] px-2 py-1 rounded border ${visualConfig.showMidiPanel ? 'bg-blue-500 border-blue-500' : 'border-white/20'}`}>MIDI</button>
+          <button onClick={() => setVisualConfig({ showMidiPanel: !visualConfig.showMidiPanel })} className={`text-[9px] px-2 py-1 rounded border ${visualConfig.showMidiPanel ? ACTIVE_CHROME : INACTIVE_CHROME}`}>MIDI</button>
 
-          <button onClick={() => setShowDiagnostics(v => !v)} className={`text-[9px] px-2 py-1 rounded border ${showDiagnostics ? 'bg-[#00FF7F] border-[#00FF7F] text-black' : 'border-white/20'}`}>DIAG</button>
+          <button onClick={() => setShowDiagnostics(v => !v)} className={`text-[9px] px-2 py-1 rounded border ${showDiagnostics ? ACTIVE_CHROME : INACTIVE_CHROME}`}>DIAG</button>
 
-          <button onClick={() => setShowSettings(!showSettings)} className={`text-lg ${showSettings ? 'text-[#00FF7F]' : 'text-white'}`}>⚙️</button>
+          <button onClick={() => setShowSettings(!showSettings)} className={`text-lg transition-colors ${showSettings ? 'text-cyan-100 drop-shadow-[0_0_12px_rgba(103,232,249,0.45)]' : 'text-slate-300 hover:text-slate-50'}`}>⚙️</button>
         </div>
       </div>
 
@@ -354,40 +359,40 @@ export const ControlPanel: React.FC = () => {
 
       {/* BOTTOM SETTINGS PANEL */}
       {showSettings && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 inline-flex bg-black/90 backdrop-blur border border-white/20 rounded p-3 z-[60] pointer-events-auto gap-4 items-stretch h-32 max-w-[95vw] overflow-x-auto">
+          <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 inline-flex ${GLASS_PANEL} rounded-md p-3 z-[60] pointer-events-auto gap-4 items-stretch h-32 max-w-[95vw] overflow-x-auto`}>
               
               {/* 【清理】移除了 PRESETS 区域 */}
 
               {/* 1. SLOTS (Effect Rack) */}
-              <div className="flex flex-col gap-1 w-40 border-r border-white/10 pr-2 shrink-0">
-                  <span className="text-[9px] text-white/50 font-bold">RACK</span>
+              <div className="flex flex-col gap-1 w-40 border-r border-slate-200/10 pr-2 shrink-0">
+                  <span className="text-[9px] text-slate-400 font-bold tracking-[0.2em]">RACK</span>
                   {visualConfig.slots.map((slot, idx) => (
                       <div
                         key={idx}
                         onClick={() => setActiveSlotIndex(idx)}
-                        className={`flex items-center justify-between px-2 h-6 border cursor-pointer ${activeSlotIndex === idx ? 'border-cyan-400 bg-cyan-400/10' : 'border-white/10 hover:border-white/30'}`}
+                        className={`flex items-center justify-between px-2 h-6 border rounded-sm cursor-pointer transition-colors ${activeSlotIndex === idx ? 'border-cyan-200/50 bg-cyan-200/10 shadow-[0_0_18px_rgba(103,232,249,0.12)]' : 'border-slate-200/10 hover:border-cyan-200/30 hover:bg-white/5'}`}
                       >
                           <div className="flex items-center gap-2">
                               <button
                                 onClick={(e) => { e.stopPropagation(); updateSlot(idx, { active: !slot.active }); }}
-                                className={`w-2 h-2 rounded-full ${slot.active ? 'bg-[#00FF7F]' : 'bg-gray-600'}`}
+                                className={`w-2 h-2 rounded-full ${slot.active ? 'bg-cyan-200 shadow-[0_0_10px_rgba(103,232,249,0.65)]' : 'bg-slate-600'}`}
                               />
-                              <span className={`text-[9px] truncate w-20 ${activeSlotIndex === idx ? 'text-cyan-400' : 'text-white'}`}>{slot.type}</span>
+                              <span className={`text-[9px] truncate w-20 ${activeSlotIndex === idx ? 'text-cyan-100' : 'text-slate-200'}`}>{slot.type}</span>
                           </div>
-                          <span className="text-[8px] text-white/30">{idx+1}</span>
+                          <span className="text-[8px] text-slate-500">{idx+1}</span>
                       </div>
                   ))}
               </div>
 
               {/* 2. PARAMETERS (Contextual) */}
-              <div className="flex flex-col gap-1 border-r border-white/10 pr-2 w-48 shrink-0">
-                  <span className="text-[9px] text-cyan-400 font-bold truncate">PARAMS // {activeSlot.type}</span>
+              <div className="flex flex-col gap-1 border-r border-slate-200/10 pr-2 w-48 shrink-0">
+                  <span className="text-[9px] text-cyan-100 font-bold truncate tracking-[0.16em]">PARAMS // {activeSlot.type}</span>
                   <div className="flex items-center gap-2 mb-2">
                       <span className="text-[9px] w-10">FX</span>
                       <select
                         value={activeSlot.type}
                         onChange={(e) => updateSlot(activeSlotIndex, { type: e.target.value as EffectType })}
-                        className="bg-black border border-white/20 text-[9px] w-28 h-5"
+                        className={`${CONTROL_FIELD} text-[9px] w-28 h-5 rounded-sm px-1`}
                       >
                           {EFFECT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                       </select>
@@ -397,7 +402,7 @@ export const ControlPanel: React.FC = () => {
 
               {/* 3. GLOBAL SETTINGS */}
               <div className="flex flex-col gap-1 w-28 shrink-0">
-                  <span className="text-[9px] text-white/50 font-bold">GLOBAL</span>
+                  <span className="text-[9px] text-slate-400 font-bold tracking-[0.2em]">GLOBAL</span>
                   <div className="flex items-center justify-between">
                       <span className="text-[9px]">VID OP.</span>
                       <input type="range" min="0" max="1" step="0.1" value={visualConfig.videoOpacity} onChange={(e) => setVisualConfig({ videoOpacity: parseFloat(e.target.value) })} className="w-12 h-1" />
@@ -408,11 +413,11 @@ export const ControlPanel: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between">
                       <span className="text-[9px]">M. VIDEO</span>
-                      <button onClick={() => setVisualConfig({ mirrorVideo: !visualConfig.mirrorVideo })} className={`w-2 h-2 rounded-full ${visualConfig.mirrorVideo ? 'bg-green-500' : 'bg-gray-600'}`} />
+                      <button onClick={() => setVisualConfig({ mirrorVideo: !visualConfig.mirrorVideo })} className={`w-2 h-2 rounded-full ${visualConfig.mirrorVideo ? 'bg-cyan-200 shadow-[0_0_10px_rgba(103,232,249,0.65)]' : 'bg-slate-600'}`} />
                   </div>
                   <div className="flex items-center justify-between">
                       <span className="text-[9px]">M. SKEL</span>
-                      <button onClick={() => setVisualConfig({ mirrorSkeleton: !visualConfig.mirrorSkeleton })} className={`w-2 h-2 rounded-full ${visualConfig.mirrorSkeleton ? 'bg-green-500' : 'bg-gray-600'}`} />
+                      <button onClick={() => setVisualConfig({ mirrorSkeleton: !visualConfig.mirrorSkeleton })} className={`w-2 h-2 rounded-full ${visualConfig.mirrorSkeleton ? 'bg-cyan-200 shadow-[0_0_10px_rgba(103,232,249,0.65)]' : 'bg-slate-600'}`} />
                   </div>
                   
                   {/* 【清理】移除了 SEAL IMG 上传区域 */}
@@ -423,26 +428,26 @@ export const ControlPanel: React.FC = () => {
       {/* MIDI PANELS (保持不变) */}
       {visualConfig.showMidiPanel && (
         <>
-            <div className="absolute top-16 left-4 w-40 p-2 bg-black/30 backdrop-blur-sm rounded-lg border border-white/5 z-40 pointer-events-auto">
+            <div className={`absolute top-16 left-4 w-40 p-2 ${GLASS_PANEL} rounded-md z-40 pointer-events-auto`}>
                 <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-black text-[#00FF7F]">LEFT HAND</span>
-                    <button onClick={() => setMuted(m => ({...m, left: !m.left}))} className={`text-[8px] px-1.5 rounded border ${muted.left ? 'border-red-500 text-red-500' : 'border-white/20 text-white/50'}`}>{muted.left ? 'MUTED' : 'ON'}</button>
+                    <span className="text-[10px] font-black text-cyan-100 tracking-[0.14em]">LEFT HAND</span>
+                    <button onClick={() => setMuted(m => ({...m, left: !m.left}))} className={`text-[8px] px-1.5 rounded border ${muted.left ? 'border-rose-300/60 text-rose-200 bg-rose-500/10' : INACTIVE_CHROME}`}>{muted.left ? 'MUTED' : 'ON'}</button>
                 </div>
                 {DEFAULT_MAPPINGS.filter(m => m.hand === 'Left').map(m => (
                     <CompactMappingRow key={m.id} mapping={m} isSolo={soloMappingId === m.id} onToggleSolo={handleToggleSolo} value={midiValues[m.id] || 0} />
                 ))}
             </div>
 
-            <div className="absolute top-16 right-4 w-40 p-2 bg-black/30 backdrop-blur-sm rounded-lg border border-white/5 z-40 pointer-events-auto">
+            <div className={`absolute top-16 right-4 w-40 p-2 ${GLASS_PANEL} rounded-md z-40 pointer-events-auto`}>
                 <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-black text-cyan-500">RIGHT HAND</span>
-                    <button onClick={() => setMuted(m => ({...m, right: !m.right}))} className={`text-[8px] px-1.5 rounded border ${muted.right ? 'border-red-500 text-red-500' : 'border-white/20 text-white/50'}`}>{muted.right ? 'MUTED' : 'ON'}</button>
+                    <span className="text-[10px] font-black text-blue-100 tracking-[0.14em]">RIGHT HAND</span>
+                    <button onClick={() => setMuted(m => ({...m, right: !m.right}))} className={`text-[8px] px-1.5 rounded border ${muted.right ? 'border-rose-300/60 text-rose-200 bg-rose-500/10' : INACTIVE_CHROME}`}>{muted.right ? 'MUTED' : 'ON'}</button>
                 </div>
                 {DEFAULT_MAPPINGS.filter(m => m.hand === 'Right').map(m => (
                     <CompactMappingRow key={m.id} mapping={m} isSolo={soloMappingId === m.id} onToggleSolo={handleToggleSolo} value={midiValues[m.id] || 0} />
                 ))}
-                <div className="mt-4 border-t border-white/10 pt-2">
-                <div className="text-[10px] font-black text-yellow-500 mb-2">GLOBAL</div>
+                <div className="mt-4 border-t border-slate-200/10 pt-2">
+                <div className="text-[10px] font-black text-slate-200 mb-2 tracking-[0.14em]">GLOBAL</div>
                 {DEFAULT_MAPPINGS.filter(m => m.hand === 'Global').map(m => (
                     <CompactMappingRow key={m.id} mapping={m} isSolo={soloMappingId === m.id} onToggleSolo={handleToggleSolo} value={midiValues[m.id] || 0} />
                 ))}
@@ -453,12 +458,12 @@ export const ControlPanel: React.FC = () => {
 
       {/* VJ MODE CLIPS (保持不变) */}
       {mode === 'VJ_MODE' && videoClips.length > 0 && showSettings && (
-        <div className="absolute bottom-40 left-1/2 -translate-x-1/2 flex gap-2 p-2 bg-black/60 rounded-lg backdrop-blur z-50 pointer-events-auto">
+        <div className={`absolute bottom-40 left-1/2 -translate-x-1/2 flex gap-2 p-2 ${GLASS_PANEL} rounded-md z-50 pointer-events-auto`}>
           {videoClips.map(clip => (
             <div key={clip.id} className="relative group">
-                <button onClick={() => selectVideoClip(clip.id)} className={`w-16 h-12 rounded border overflow-hidden relative ${activeClipId === clip.id ? 'border-cyan-400' : 'border-white/20 opacity-60'}`}>
+                <button onClick={() => selectVideoClip(clip.id)} className={`w-16 h-12 rounded border overflow-hidden relative ${activeClipId === clip.id ? 'border-cyan-200/70 shadow-[0_0_18px_rgba(103,232,249,0.18)]' : 'border-slate-200/20 opacity-60'}`}>
                 <video src={clip.url} className="w-full h-full object-cover" muted />
-                <div className="absolute bottom-0 w-full bg-black/50 text-[8px] truncate px-1">{clip.name}</div>
+                <div className="absolute bottom-0 w-full bg-slate-950/70 text-[8px] truncate px-1">{clip.name}</div>
                 </button>
                 <button
                     onClick={(e) => { e.stopPropagation(); removeVideoClip(clip.id); }}
