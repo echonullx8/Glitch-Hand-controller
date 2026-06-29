@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { midiService } from '../../services/midiService';
 import { subscribeRealtimeClock } from '../../utils/realtimeClock';
-import { switchSharedCamera } from '../../utils/cameraService';
+import { getSharedCameraVideo, switchSharedCamera } from '../../utils/cameraService';
 
 // 本地定义类型
 type EffectType = 'None' | 'SimpleGlitch' | 'AnalogGlitch' | 'Particles' | 'Flash' | 'FaceParticles';
@@ -129,6 +129,7 @@ export const ControlPanel: React.FC = () => {
   const [selectedMidiDevice, setSelectedMidiDevice] = useState<string>('all');
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [isLoadingCameras, setIsLoadingCameras] = useState(true);
   const [soloMappingId, setSoloMappingId] = useState<string>('');
   const [midiValues, setMidiValues] = useState<Record<string, number>>({});
   const [showDiagnostics, setShowDiagnostics] = useState(false);
@@ -147,16 +148,34 @@ export const ControlPanel: React.FC = () => {
   const lastMidiValuesRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
+      let isCancelled = false;
+
       const getCameras = async () => {
         try {
+            await getSharedCameraVideo().catch(error => {
+                console.warn('Camera permission or initial video failed before device enumeration.', error);
+            });
+
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videos = devices.filter(d => d.kind === 'videoinput');
+            if (isCancelled) return;
+
             setVideoDevices(videos);
             if(videos.length > 0 && !selectedCameraId) setSelectedCameraId(videos[0].deviceId);
         } catch(e) { console.error(e); }
+        finally {
+            if (!isCancelled) setIsLoadingCameras(false);
+        }
       };
+
       getCameras();
+      navigator.mediaDevices?.addEventListener?.('devicechange', getCameras);
       midiService.initialize().then(() => { midiService.onStateChange(setMidiDevices); });
+
+      return () => {
+          isCancelled = true;
+          navigator.mediaDevices?.removeEventListener?.('devicechange', getCameras);
+      };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -307,7 +326,8 @@ export const ControlPanel: React.FC = () => {
           </select>
 
           {mode === 'LIVE_AR' && (
-              <select value={selectedCameraId} onChange={(e) => handleCameraChange(e.target.value)} className="bg-black border border-white/20 text-[9px] rounded px-1 outline-none h-6 w-24 text-white">
+              <select value={selectedCameraId} disabled={isLoadingCameras} onChange={(e) => handleCameraChange(e.target.value)} className="bg-black border border-white/20 text-[9px] rounded px-1 outline-none h-6 w-28 text-white disabled:opacity-50">
+                    {isLoadingCameras && <option value="">Detecting...</option>}
                     {videoDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label || 'Camera'}</option>)}
               </select>
           )}
