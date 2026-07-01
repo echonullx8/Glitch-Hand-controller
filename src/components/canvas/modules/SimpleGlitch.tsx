@@ -4,13 +4,12 @@ import { useFBO } from '@react-three/drei';
 import { useAppStore, getMetricValue } from '../../../store/useAppStore';
 import * as THREE from 'three';
 
-export const SimpleGlitchMaterial = {
+const GlitchMaterial = {
   uniforms: {
     tDiffuse: { value: null },
     uTime: { value: 0 },
     uAmount: { value: 0 },
-    uSpeed: { value: 0 },
-    uApplyGamma: { value: 1 }
+    uSpeed: { value: 0 }
   },
   vertexShader: `
     varying vec2 vUv;
@@ -24,16 +23,10 @@ export const SimpleGlitchMaterial = {
     uniform float uTime;
     uniform float uAmount;
     uniform float uSpeed;
-    uniform float uApplyGamma;
     varying vec2 vUv;
 
     float rand(vec2 co){
         return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-    }
-
-    vec3 applyGamma(vec3 color) {
-        if (uApplyGamma > 0.5) return pow(max(color, vec3(0.0)), vec3(1.0 / 2.2));
-        return color;
     }
 
     void main() {
@@ -41,7 +34,7 @@ export const SimpleGlitchMaterial = {
       vec4 base = texture2D(tDiffuse, uv);
       
       if (uAmount <= 0.01) {
-        base.rgb = applyGamma(base.rgb);
+        base.rgb = pow(base.rgb, vec3(1.0 / 2.2));
         gl_FragColor = base;
         return;
       }
@@ -52,7 +45,7 @@ export const SimpleGlitchMaterial = {
       float threshold = 1.0 - (uSpeed * 0.9 + 0.05); 
       
       if (triggerRandom < threshold) {
-          base.rgb = applyGamma(base.rgb);
+          base.rgb = pow(base.rgb, vec3(1.0 / 2.2));
           gl_FragColor = base;
           return;
       }
@@ -104,7 +97,7 @@ export const SimpleGlitchMaterial = {
       // 5. 色彩修正
       finalColor.r *= 0.95; 
       finalColor.b *= 1.05;
-      finalColor = applyGamma(finalColor);
+      finalColor = pow(finalColor, vec3(1.0 / 2.2));
 
       gl_FragColor = vec4(finalColor, 1.0);
     }
@@ -128,9 +121,9 @@ export const SimpleGlitch: React.FC<{ params: any, overlayScene?: THREE.Scene }>
   const customTimeRef = useRef(0);
 
   const shaderArgs = useMemo(() => ({
-    uniforms: THREE.UniformsUtils.clone(SimpleGlitchMaterial.uniforms),
-    vertexShader: SimpleGlitchMaterial.vertexShader,
-    fragmentShader: SimpleGlitchMaterial.fragmentShader
+    uniforms: THREE.UniformsUtils.clone(GlitchMaterial.uniforms),
+    vertexShader: GlitchMaterial.vertexShader,
+    fragmentShader: GlitchMaterial.fragmentShader
   }), []);
 
   const quad = useMemo(() => {
