@@ -419,6 +419,16 @@ export const ControlPanel: React.FC = () => {
                       <span className="text-[9px]">M. SKEL</span>
                       <button onClick={() => setVisualConfig({ mirrorSkeleton: !visualConfig.mirrorSkeleton })} className={`w-2 h-2 rounded-full ${visualConfig.mirrorSkeleton ? 'bg-cyan-200 shadow-[0_0_10px_rgba(103,232,249,0.65)]' : 'bg-slate-600'}`} />
                   </div>
+                  <div className="flex items-center justify-between">
+                      <span className="text-[9px]">PRT COL</span>
+                      <input
+                        type="color"
+                        value={visualConfig.particleColor || '#67E8F9'}
+                        onChange={(e) => setVisualConfig({ particleColor: e.target.value })}
+                        className="h-4 w-6 cursor-pointer rounded border border-slate-200/10 bg-slate-950/60 p-0"
+                        title="Particle color"
+                      />
+                  </div>
                   
                   {/* 【清理】移除了 SEAL IMG 上传区域 */}
               </div>
