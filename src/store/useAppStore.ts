@@ -54,6 +54,7 @@ export interface EffectSlot {
 export interface VisualConfig {
   videoOpacity: number; mirrorVideo: boolean; mirrorSkeleton: boolean;
   skeletonOpacity: number;
+  particleColor: string;
   slots: [EffectSlot, EffectSlot, EffectSlot, EffectSlot];
 }
 
@@ -72,6 +73,7 @@ const DEFAULT_SLOTS: [EffectSlot, EffectSlot, EffectSlot, EffectSlot] = [
 
 const DEFAULT_VISUAL_CONFIG: VisualConfig = {
   videoOpacity: 1.0, mirrorVideo: true, mirrorSkeleton: true, skeletonOpacity: 1.0,
+  particleColor: '#67E8F9',
   slots: DEFAULT_SLOTS
 };
 
@@ -217,7 +219,15 @@ export const useAppStore = create<AppState>()(
         // isSwapped: state.isSwapped,
       }),
       merge: (persistedState, currentState) => {
-          return { ...currentState, ...(persistedState as any) };
+          const persisted = persistedState as Partial<AppState> | undefined;
+          return {
+            ...currentState,
+            ...persisted,
+            visualConfig: {
+              ...currentState.visualConfig,
+              ...(persisted?.visualConfig || {})
+            }
+          };
       }
     }
   )
