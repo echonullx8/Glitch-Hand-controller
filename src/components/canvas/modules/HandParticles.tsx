@@ -52,7 +52,7 @@ class ParticleSystemCPU {
   }
 }
 
-const SingleHandParticles = ({ side, color, params }: { side: 'left' | 'right', color: string, params: any }) => {
+const SingleHandParticles = ({ side, params }: { side: 'left' | 'right', params: any }) => {
   const { handDataRef, isSwapped, visualConfig } = useAppStore();
   const { viewport } = useThree();
   const system = useMemo(() => new ParticleSystemCPU(MAX_COUNT), []);
@@ -64,7 +64,9 @@ const SingleHandParticles = ({ side, color, params }: { side: 'left' | 'right', 
   useFrame(() => {
     if (!pointsRef.current) return;
     const material = pointsRef.current.material as THREE.ShaderMaterial;
-    material.uniforms.uColor.value.set(color);
+    const latestConfig = useAppStore.getState().visualConfig;
+    material.uniforms.uColor.value.set(latestConfig.particleColor || DEFAULT_PARTICLE_COLOR);
+    material.uniforms.uSizeScale.value = latestConfig.particleSize || 1.0;
 
     const data = handDataRef.current;
     const p = params || { amountSource: 'None' };
@@ -111,16 +113,19 @@ const SingleHandParticles = ({ side, color, params }: { side: 'left' | 'right', 
         <bufferAttribute attach="attributes-opacity" count={MAX_COUNT} array={opacities} itemSize={1} />
       </bufferGeometry>
       <shaderMaterial
-        transparent depthWrite={false} depthTest={false} blending={THREE.AdditiveBlending}
-        uniforms={{ uColor: { value: new THREE.Color(color) } }}
+        transparent depthWrite={false} depthTest={false} blending={THREE.NormalBlending}
+        uniforms={{
+          uColor: { value: new THREE.Color(DEFAULT_PARTICLE_COLOR) },
+          uSizeScale: { value: 1.0 }
+        }}
         vertexShader={`
-          attribute float size; attribute float opacity; varying float vOpacity;
+          uniform float uSizeScale; attribute float size; attribute float opacity; varying float vOpacity;
           void main() { 
             vOpacity = opacity; 
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
             float distScale = 10.0 / -mvPosition.z; 
             // 【修改】倍率调小
-            gl_PointSize = size * 3.0 * distScale; 
+            gl_PointSize = size * 3.0 * uSizeScale * distScale; 
             gl_Position = projectionMatrix * mvPosition; 
           }
         `}
@@ -132,7 +137,7 @@ const SingleHandParticles = ({ side, color, params }: { side: 'left' | 'right', 
             float dist = max(coord.x, coord.y);
             float glow = 1.0 - smoothstep(0.2, 0.5, dist);
             float core = 1.0 - smoothstep(0.0, 0.3, dist);
-            vec3 finalColor = mix(uColor, vec3(1.0), core * 0.4);
+            vec3 finalColor = mix(uColor, vec3(1.0), core * 0.22);
             gl_FragColor = vec4(finalColor, vOpacity * glow); 
           }
         `}
@@ -143,12 +148,10 @@ const SingleHandParticles = ({ side, color, params }: { side: 'left' | 'right', 
 };
 
 export const HandParticles: React.FC<{ params: any }> = ({ params }) => {
-  const particleColor = useAppStore(state => state.visualConfig.particleColor || DEFAULT_PARTICLE_COLOR);
-
   return (
     <>
-      <SingleHandParticles side="left" color={particleColor} params={params} />
-      <SingleHandParticles side="right" color={particleColor} params={params} />
+      <SingleHandParticles side="left" params={params} />
+      <SingleHandParticles side="right" params={params} />
     </>
   );
 };
