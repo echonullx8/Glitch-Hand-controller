@@ -15,7 +15,7 @@ import * as THREE from 'three';
 // 本地定义类型
 interface EffectSlot {
   id: string;
-  type: 'None' | 'SimpleGlitch' | 'AnalogGlitch' | 'Particles' | 'Flash' | 'FaceParticles';
+  type: 'None' | 'SimpleGlitch' | 'AnalogGlitch' | 'Particles' | 'Flash' | 'Ascii' | 'FaceParticles';
   params: any;
   active: boolean;
 }
@@ -26,6 +26,7 @@ const EffectRenderer = ({ slot, overlayScene }: { slot: EffectSlot, overlayScene
         case 'SimpleGlitch': return <SimpleGlitch params={slot.params} overlayScene={overlayScene} />;
         case 'AnalogGlitch': return <AnalogGlitch params={slot.params} />;
         case 'Particles': return <HandParticles params={slot.params} />;
+        case 'Ascii': return <FaceParticles params={slot.params} />;
         case 'FaceParticles': return <FaceParticles params={slot.params} />;
         case 'Flash': return <FlashEffect params={slot.params} />;
         default: return null;
@@ -45,7 +46,7 @@ const SceneContent: React.FC = () => {
 
   const hasAnalog = visualConfig.slots.some((s: any) => s.active && s.type === 'AnalogGlitch');
   const hasSimple = visualConfig.slots.some((s: any) => s.active && s.type === 'SimpleGlitch');
-  const hasAscii = visualConfig.slots.some((s: any) => s.active && s.type === 'FaceParticles');
+  const hasAscii = visualConfig.slots.some((s: any) => s.active && (s.type === 'Ascii' || s.type === 'FaceParticles'));
 
   return (
     <>
@@ -54,7 +55,7 @@ const SceneContent: React.FC = () => {
         <HandSkeleton />
         
         {visualConfig.slots.map((slot: any) => {
-            if (slot.type === 'Particles' || slot.type === 'Flash' || slot.type === 'FaceParticles') {
+            if (slot.type === 'Particles' || slot.type === 'Flash' || slot.type === 'Ascii' || slot.type === 'FaceParticles') {
                 return <EffectRenderer key={slot.id} slot={slot} />;
             }
             return null;
