@@ -412,6 +412,17 @@ export const ControlPanel: React.FC = () => {
                             className="h-5 w-10 cursor-pointer rounded-sm border border-slate-200/10 bg-slate-950/60 p-0"
                             title="Particle color"
                           />
+                          <span className="text-[9px] ml-1">SIZE</span>
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="2"
+                            step="0.1"
+                            value={visualConfig.particleSize || 1}
+                            onChange={(e) => setVisualConfig({ particleSize: parseFloat(e.target.value) })}
+                            className="w-12 h-1"
+                            title="Particle size"
+                          />
                       </div>
                   )}
                   {(activeSlot.type === 'Ascii' || activeSlot.type === 'FaceParticles') && (
