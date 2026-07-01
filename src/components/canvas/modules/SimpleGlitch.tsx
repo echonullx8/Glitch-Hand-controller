@@ -4,7 +4,7 @@ import { useFBO } from '@react-three/drei';
 import { useAppStore, getMetricValue } from '../../../store/useAppStore';
 import * as THREE from 'three';
 
-const GlitchMaterial = {
+export const SimpleGlitchMaterial = {
   uniforms: {
     tDiffuse: { value: null },
     uTime: { value: 0 },
@@ -121,9 +121,9 @@ export const SimpleGlitch: React.FC<{ params: any, overlayScene?: THREE.Scene }>
   const customTimeRef = useRef(0);
 
   const shaderArgs = useMemo(() => ({
-    uniforms: THREE.UniformsUtils.clone(GlitchMaterial.uniforms),
-    vertexShader: GlitchMaterial.vertexShader,
-    fragmentShader: GlitchMaterial.fragmentShader
+    uniforms: THREE.UniformsUtils.clone(SimpleGlitchMaterial.uniforms),
+    vertexShader: SimpleGlitchMaterial.vertexShader,
+    fragmentShader: SimpleGlitchMaterial.fragmentShader
   }), []);
 
   const quad = useMemo(() => {
