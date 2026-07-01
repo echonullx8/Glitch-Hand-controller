@@ -97,6 +97,7 @@ const GlitchStack = ({ slots, overlayScene }: { slots: any[], overlayScene?: THR
         material.uniforms.uTime.value = timeRef.current[id];
         material.uniforms.uAmount.value = amt;
         material.uniforms.uSpeed.value = speedParam;
+        material.uniforms.uApplyGamma.value = isLast ? 1 : 0;
         quad.material = material;
       } else {
         const material = materials.AnalogGlitch;
@@ -105,6 +106,7 @@ const GlitchStack = ({ slots, overlayScene }: { slots: any[], overlayScene?: THR
         material.uniforms.tDiffuse.value = inputTarget.texture;
         material.uniforms.uTime.value = timeRef.current[id];
         material.uniforms.uAmount.value = amt;
+        material.uniforms.uApplyGamma.value = isLast ? 1 : 0;
         quad.material = material;
       }
 
