@@ -4,7 +4,7 @@ import { useFBO } from '@react-three/drei';
 import { useAppStore, getMetricValue } from '../../../store/useAppStore';
 import * as THREE from 'three';
 
-const AnalogMaterial = {
+export const AnalogGlitchMaterial = {
   uniforms: {
     tDiffuse: { value: null },
     uTime: { value: 0 },
@@ -80,9 +80,9 @@ export const AnalogGlitch: React.FC<{ params: any }> = ({ params }) => {
   const customTimeRef = useRef(0);
 
   const shaderArgs = useMemo(() => ({
-    uniforms: THREE.UniformsUtils.clone(AnalogMaterial.uniforms),
-    vertexShader: AnalogMaterial.vertexShader,
-    fragmentShader: AnalogMaterial.fragmentShader
+    uniforms: THREE.UniformsUtils.clone(AnalogGlitchMaterial.uniforms),
+    vertexShader: AnalogGlitchMaterial.vertexShader,
+    fragmentShader: AnalogGlitchMaterial.fragmentShader
   }), []);
 
   const quad = useMemo(() => {
