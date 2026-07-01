@@ -8,7 +8,7 @@ import { subscribeRealtimeClock } from '../../utils/realtimeClock';
 import { getSharedCameraVideo, switchSharedCamera } from '../../utils/cameraService';
 
 // 本地定义类型
-type EffectType = 'None' | 'SimpleGlitch' | 'AnalogGlitch' | 'Particles' | 'Flash' | 'FaceParticles';
+type EffectType = 'None' | 'SimpleGlitch' | 'AnalogGlitch' | 'Particles' | 'Flash' | 'Ascii' | 'FaceParticles';
 type HandSide = 'Left' | 'Right';
 
 interface MidiMapping {
@@ -89,7 +89,7 @@ const CompactMappingRow = ({ mapping, isSolo, onToggleSolo, value }: any) => {
   );
 };
 
-const EFFECT_TYPES: EffectType[] = ['None', 'SimpleGlitch', 'AnalogGlitch', 'Particles', 'FaceParticles', 'Flash'];
+const EFFECT_TYPES: EffectType[] = ['None', 'SimpleGlitch', 'AnalogGlitch', 'Particles', 'Ascii', 'Flash'];
 const GLASS_PANEL = 'bg-slate-950/55 backdrop-blur-xl border border-slate-200/10 shadow-[0_18px_60px_rgba(3,7,18,0.45)]';
 const CONTROL_FIELD = 'bg-slate-950/60 border border-slate-200/10 text-slate-100 shadow-inner shadow-black/30 focus:border-cyan-200/50 focus:outline-none';
 const ACTIVE_CHROME = 'bg-cyan-200/12 text-cyan-50 border-cyan-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_0_20px_rgba(103,232,249,0.16)]';
@@ -274,7 +274,7 @@ export const ControlPanel: React.FC = () => {
   const renderParams = () => {
       if (activeSlot.type === 'None') return <div className="text-[9px] text-white/30">NO EFFECT SELECTED</div>;
 
-      const showSpeed = activeSlot.type === 'SimpleGlitch' || activeSlot.type === 'AnalogGlitch' || activeSlot.type === 'FaceParticles';
+      const showSpeed = activeSlot.type === 'SimpleGlitch' || activeSlot.type === 'AnalogGlitch' || activeSlot.type === 'Ascii' || activeSlot.type === 'FaceParticles';
 
       return (
           <>
