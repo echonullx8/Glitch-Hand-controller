@@ -5,8 +5,8 @@ import { useAppStore, getMetricValue } from '../../../store/useAppStore';
 
 const MAX_COUNT = 4000;
 const TIPS_INDICES = [4, 8, 12, 16, 20];
-const LEFT_COLOR = '#00FF7F';
-const RIGHT_COLOR = '#22D3EE';
+const LEFT_COLOR = '#BAE6FD';
+const RIGHT_COLOR = '#67E8F9';
 
 class ParticleSystemCPU {
   count: number; pointer: number;
