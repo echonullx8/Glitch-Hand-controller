@@ -3,8 +3,6 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useAppStore, getMetricValue } from '../../../store/useAppStore';
 
-const DEFAULT_PARTICLE_COLOR = '#67E8F9';
-
 const AsciiMaterial = {
   uniforms: {
     uTime: { value: 0 },
@@ -12,8 +10,7 @@ const AsciiMaterial = {
     uCharMap: { value: null },
     uAmount: { value: 0 },
     uGridSize: { value: 150.0 },
-    uMirror: { value: 0.0 },
-    uParticleColor: { value: new THREE.Color(DEFAULT_PARTICLE_COLOR) }
+    uMirror: { value: 0.0 }
   },
   vertexShader: `
     varying vec2 vUv;
@@ -29,7 +26,6 @@ const AsciiMaterial = {
     uniform float uMirror;
     uniform sampler2D uMap;
     uniform sampler2D uCharMap;
-    uniform vec3 uParticleColor;
     varying vec2 vUv;
 
     float rand(vec2 co){
@@ -80,8 +76,9 @@ const AsciiMaterial = {
 
         float brightness = isOverload ? 1.0 : (contrastGray + 0.1);
         float charAlpha = smoothstep(0.0, 0.5, 1.0);
+        vec3 matrixGreen = vec3(0.0, 1.0, 0.5);
 
-        gl_FragColor = vec4(uParticleColor * brightness, charAlpha);
+        gl_FragColor = vec4(matrixGreen * brightness, charAlpha);
     }
   `
 };
@@ -145,7 +142,6 @@ export const FaceParticles: React.FC<{ params: any }> = ({ params }) => {
     materialRef.current.uniforms.uMap.value = videoTexture;
     materialRef.current.uniforms.uCharMap.value = charTexture;
     materialRef.current.uniforms.uMirror.value = visualConfig.mirrorVideo ? 1.0 : 0.0;
-    materialRef.current.uniforms.uParticleColor.value.set(visualConfig.particleColor || DEFAULT_PARTICLE_COLOR);
   });
 
   return (
