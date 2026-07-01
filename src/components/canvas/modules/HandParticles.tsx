@@ -63,6 +63,9 @@ const SingleHandParticles = ({ side, color, params }: { side: 'left' | 'right', 
 
   useFrame(() => {
     if (!pointsRef.current) return;
+    const material = pointsRef.current.material as THREE.ShaderMaterial;
+    material.uniforms.uColor.value.set(color);
+
     const data = handDataRef.current;
     const p = params || { amountSource: 'None' };
     const intensity = getMetricValue(p.amountSource, data, p.amountInvert);
