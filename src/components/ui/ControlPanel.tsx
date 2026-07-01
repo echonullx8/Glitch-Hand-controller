@@ -94,6 +94,10 @@ const GLASS_PANEL = 'bg-slate-950/55 backdrop-blur-xl border border-slate-200/10
 const CONTROL_FIELD = 'bg-slate-950/60 border border-slate-200/10 text-slate-100 shadow-inner shadow-black/30 focus:border-cyan-200/50 focus:outline-none';
 const ACTIVE_CHROME = 'bg-cyan-200/12 text-cyan-50 border-cyan-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_0_20px_rgba(103,232,249,0.16)]';
 const INACTIVE_CHROME = 'border-slate-200/10 text-slate-300/70 hover:border-cyan-200/30 hover:bg-cyan-200/10 hover:text-slate-100';
+const ASCII_COLOR_OPTIONS = [
+  { label: 'GREEN', value: '#00FF80' },
+  { label: 'CYAN', value: '#67E8F9' },
+];
 
 const DiagnosticsPanel = ({ data }: { data: DiagnosticsSnapshot }) => {
   const fmt = (value: number, digits = 1) => Number.isFinite(value) ? value.toFixed(digits) : '0.0';
@@ -408,6 +412,23 @@ export const ControlPanel: React.FC = () => {
                             className="h-5 w-10 cursor-pointer rounded-sm border border-slate-200/10 bg-slate-950/60 p-0"
                             title="Particle color"
                           />
+                      </div>
+                  )}
+                  {(activeSlot.type === 'Ascii' || activeSlot.type === 'FaceParticles') && (
+                      <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[9px] w-10">COL</span>
+                          <div className="flex gap-1">
+                              {ASCII_COLOR_OPTIONS.map(option => (
+                                  <button
+                                    key={option.value}
+                                    onClick={() => setVisualConfig({ asciiColor: option.value })}
+                                    className={`h-5 px-2 rounded-sm border text-[8px] font-bold tracking-[0.08em] ${((visualConfig.asciiColor || '#00FF80').toUpperCase() === option.value) ? ACTIVE_CHROME : INACTIVE_CHROME}`}
+                                    title={`ASCII ${option.label.toLowerCase()}`}
+                                  >
+                                      {option.label}
+                                  </button>
+                              ))}
+                          </div>
                       </div>
                   )}
               </div>
