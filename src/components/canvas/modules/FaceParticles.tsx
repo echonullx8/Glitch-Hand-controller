@@ -74,11 +74,11 @@ const AsciiMaterial = {
              return;
         }
 
-        vec3 matrixGreen = vec3(0.0, 1.0, 0.5);
+        vec3 particleBlue = vec3(0.73, 0.90, 0.99);
         float brightness = isOverload ? 1.0 : (contrastGray + 0.1);
         float charAlpha = smoothstep(0.0, 0.5, 1.0);
 
-        gl_FragColor = vec4(matrixGreen * brightness, charAlpha);
+        gl_FragColor = vec4(particleBlue * brightness, charAlpha);
     }
   `
 };
