@@ -4,12 +4,11 @@ import { useFBO } from '@react-three/drei';
 import { useAppStore, getMetricValue } from '../../../store/useAppStore';
 import * as THREE from 'three';
 
-export const AnalogGlitchMaterial = {
+const AnalogMaterial = {
   uniforms: {
     tDiffuse: { value: null },
     uTime: { value: 0 },
-    uAmount: { value: 0 },
-    uApplyGamma: { value: 1 }
+    uAmount: { value: 0 }
   },
   vertexShader: `
     varying vec2 vUv;
@@ -22,16 +21,10 @@ export const AnalogGlitchMaterial = {
     uniform sampler2D tDiffuse;
     uniform float uTime;
     uniform float uAmount;
-    uniform float uApplyGamma;
     varying vec2 vUv;
 
     float rand(vec2 co){
         return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-    }
-
-    vec3 applyGamma(vec3 color) {
-        if (uApplyGamma > 0.5) return pow(max(color, vec3(0.0)), vec3(1.0 / 2.2));
-        return color;
     }
 
     void main() {
@@ -40,7 +33,7 @@ export const AnalogGlitchMaterial = {
       
       if (strength <= 0.01) {
          vec4 c = texture2D(tDiffuse, uv);
-         c.rgb = applyGamma(c.rgb); 
+         c.rgb = pow(c.rgb, vec3(1.0 / 2.2)); 
          gl_FragColor = c;
          return;
       }
@@ -63,7 +56,7 @@ export const AnalogGlitchMaterial = {
       float noise = rand(vec2(floor(uv.x * 250.0), floor(uv.y * 250.0)) + uTime);
       if (noise < strength * 0.3) color += vec3(0.1);
 
-      color = applyGamma(color);
+      color = pow(color, vec3(1.0 / 2.2));
 
       gl_FragColor = vec4(color, 1.0);
     }
@@ -87,9 +80,9 @@ export const AnalogGlitch: React.FC<{ params: any }> = ({ params }) => {
   const customTimeRef = useRef(0);
 
   const shaderArgs = useMemo(() => ({
-    uniforms: THREE.UniformsUtils.clone(AnalogGlitchMaterial.uniforms),
-    vertexShader: AnalogGlitchMaterial.vertexShader,
-    fragmentShader: AnalogGlitchMaterial.fragmentShader
+    uniforms: THREE.UniformsUtils.clone(AnalogMaterial.uniforms),
+    vertexShader: AnalogMaterial.vertexShader,
+    fragmentShader: AnalogMaterial.fragmentShader
   }), []);
 
   const quad = useMemo(() => {
