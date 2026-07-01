@@ -5,8 +5,7 @@ import { useAppStore, getMetricValue } from '../../../store/useAppStore';
 
 const MAX_COUNT = 4000;
 const TIPS_INDICES = [4, 8, 12, 16, 20];
-const LEFT_COLOR = '#BAE6FD';
-const RIGHT_COLOR = '#67E8F9';
+const DEFAULT_PARTICLE_COLOR = '#67E8F9';
 
 class ParticleSystemCPU {
   count: number; pointer: number;
@@ -141,10 +140,12 @@ const SingleHandParticles = ({ side, color, params }: { side: 'left' | 'right', 
 };
 
 export const HandParticles: React.FC<{ params: any }> = ({ params }) => {
+  const particleColor = useAppStore(state => state.visualConfig.particleColor || DEFAULT_PARTICLE_COLOR);
+
   return (
     <>
-      <SingleHandParticles side="left" color={LEFT_COLOR} params={params} />
-      <SingleHandParticles side="right" color={RIGHT_COLOR} params={params} />
+      <SingleHandParticles side="left" color={particleColor} params={params} />
+      <SingleHandParticles side="right" color={particleColor} params={params} />
     </>
   );
 };
