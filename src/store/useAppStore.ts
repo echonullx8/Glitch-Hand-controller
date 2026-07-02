@@ -57,7 +57,7 @@ export interface VisualConfig {
   particleColor: string;
   particleSize: number;
   asciiColor: string;
-  sealStyle: 'Cyber' | 'Ouroboros';
+  sealStyle: 'Cyber' | 'Jelly';
   sealOpacity: number;
   sealColor: string;
   slots: [EffectSlot, EffectSlot, EffectSlot, EffectSlot];
