@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import * as THREE from 'three';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useAppStore } from '../../store/useAppStore';
@@ -9,13 +9,77 @@ export const Background: React.FC = () => {
   const {
       videoClips, activeClipId, mode, visualConfig,
       setVideoTexture: setGlobalVideoTexture,
-      setVideoScale
+      setVideoScale,
+      handDataRef
   } = useAppStore();
   
   const [videoTexture, setVideoTexture] = useState<THREE.VideoTexture | null>(null);
   const [cameraRevision, setCameraRevision] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const meshRef = useRef<THREE.Mesh>(null);
+  const jellyMaterial = useMemo(() => new THREE.ShaderMaterial({
+    uniforms: {
+      uMap: { value: null },
+      uTime: { value: 0 },
+      uVideoOpacity: { value: 1 },
+      uJellyStrength: { value: 0 },
+      uJellyOpacity: { value: 1 },
+      uJellyColor: { value: new THREE.Color('#67E8F9') },
+      uPoints: {
+        value: [
+          new THREE.Vector2(0.5, 0.5),
+          new THREE.Vector2(0.5, 0.5),
+          new THREE.Vector2(0.5, 0.5),
+          new THREE.Vector2(0.5, 0.5),
+        ]
+      }
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D uMap;
+      uniform float uTime;
+      uniform float uVideoOpacity;
+      uniform float uJellyStrength;
+      uniform float uJellyOpacity;
+      uniform vec3 uJellyColor;
+      uniform vec2 uPoints[4];
+      varying vec2 vUv;
+
+      void main() {
+        vec2 uv = vUv;
+        vec2 warp = vec2(0.0);
+        float glow = 0.0;
+        float strength = uJellyStrength * uJellyOpacity;
+
+        for (int i = 0; i < 4; i++) {
+          vec2 toPixel = uv - uPoints[i];
+          float dist = length(toPixel);
+          float falloff = exp(-dist * 13.0);
+          vec2 dir = normalize(toPixel + vec2(0.0001));
+          float ripple = sin(dist * 46.0 - uTime * 8.0) * 0.006;
+          warp += dir * falloff * strength * (0.05 + ripple);
+          glow += falloff;
+        }
+
+        vec2 warpedUv = clamp(uv - warp, 0.001, 0.999);
+        vec4 videoColor = texture2D(uMap, warpedUv);
+        float tintAmount = clamp(glow * strength * 0.16, 0.0, 0.28);
+        vec3 finalColor = mix(videoColor.rgb, uJellyColor, tintAmount);
+        gl_FragColor = vec4(finalColor, videoColor.a * uVideoOpacity);
+      }
+    `,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    side: THREE.DoubleSide,
+  }), []);
 
   const bgDistance = 15;
   const vFov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
@@ -124,6 +188,28 @@ export const Background: React.FC = () => {
       if (visualConfig.mirrorVideo) scaleX *= -1;
 
       meshRef.current.scale.set(scaleX, scaleY, 1);
+
+      const data = handDataRef.current;
+      const isJellySeal = visualConfig.sealStyle === 'Jelly' && data.sealActive && data.left && data.right;
+      const points = jellyMaterial.uniforms.uPoints.value as THREE.Vector2[];
+      const setPoint = (index: number, point: { x: number; y: number }) => {
+          const x = visualConfig.mirrorVideo ? 1 - point.x : point.x;
+          points[index].set(x, 1 - point.y);
+      };
+
+      if (isJellySeal && data.left && data.right) {
+          setPoint(0, data.left.thumbTip);
+          setPoint(1, data.left.indexTip);
+          setPoint(2, data.right.thumbTip);
+          setPoint(3, data.right.indexTip);
+      }
+
+      jellyMaterial.uniforms.uTime.value += 0.016;
+      jellyMaterial.uniforms.uMap.value = videoTexture;
+      jellyMaterial.uniforms.uVideoOpacity.value = visualConfig.videoOpacity;
+      jellyMaterial.uniforms.uJellyOpacity.value = visualConfig.sealOpacity ?? 1;
+      jellyMaterial.uniforms.uJellyColor.value.set(visualConfig.sealColor || '#67E8F9');
+      jellyMaterial.uniforms.uJellyStrength.value = isJellySeal ? Math.min(1, Math.max(0, data.sealSize)) : 0;
   });
 
   if (!videoTexture) return null;
@@ -131,15 +217,7 @@ export const Background: React.FC = () => {
   return (
     <mesh ref={meshRef} position={[0, 0, -10]}>
       <planeGeometry args={[1, 1]} />
-      <meshBasicMaterial
-        map={videoTexture}
-        color="white"
-        toneMapped={false}
-        transparent
-        opacity={visualConfig.videoOpacity}
-        side={THREE.DoubleSide}
-        depthTest={false}
-      />
+      <primitive object={jellyMaterial} attach="material" />
     </mesh>
   );
 };
