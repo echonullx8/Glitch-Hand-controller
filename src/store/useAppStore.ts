@@ -55,6 +55,7 @@ export interface EffectSlot {
 export interface VisualConfig {
   videoOpacity: number; mirrorVideo: boolean; mirrorSkeleton: boolean;
   skeletonOpacity: number;
+  skeletonColor: string;
   particleColor: string;
   particleSize: number;
   asciiColor: string;
@@ -80,6 +81,7 @@ const DEFAULT_SLOTS: [EffectSlot, EffectSlot, EffectSlot, EffectSlot] = [
 
 const DEFAULT_VISUAL_CONFIG: VisualConfig = {
   videoOpacity: 1.0, mirrorVideo: true, mirrorSkeleton: true, skeletonOpacity: 1.0,
+  skeletonColor: '#67E8F9',
   particleColor: '#67E8F9',
   particleSize: 1.0,
   asciiColor: '#00FF41',
