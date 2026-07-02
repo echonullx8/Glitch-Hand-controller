@@ -57,6 +57,9 @@ export interface VisualConfig {
   particleColor: string;
   particleSize: number;
   asciiColor: string;
+  sealStyle: 'Cyber' | 'Ouroboros';
+  sealOpacity: number;
+  sealColor: string;
   slots: [EffectSlot, EffectSlot, EffectSlot, EffectSlot];
 }
 
@@ -78,6 +81,9 @@ const DEFAULT_VISUAL_CONFIG: VisualConfig = {
   particleColor: '#67E8F9',
   particleSize: 1.0,
   asciiColor: '#00FF41',
+  sealStyle: 'Cyber',
+  sealOpacity: 1.0,
+  sealColor: '#67E8F9',
   slots: DEFAULT_SLOTS
 };
 
