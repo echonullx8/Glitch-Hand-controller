@@ -322,7 +322,14 @@ export const ControlPanel: React.FC = () => {
       <div className="absolute inset-x-0 -top-24 h-72 bg-[radial-gradient(ellipse_at_18%_12%,rgba(125,211,252,0.18),rgba(15,23,42,0.08)_38%,transparent_72%)] blur-2xl pointer-events-none" />
       {/* TOP BAR */}
       <div className="absolute top-0 left-0 w-full h-12 bg-slate-950/55 backdrop-blur-xl border-b border-slate-200/10 shadow-[0_10px_50px_rgba(2,6,23,0.35)] flex items-center px-4 justify-between z-50 pointer-events-auto">
-        <div className="text-xs font-semibold tracking-[0.32em] text-slate-100">HAND CONTROLLER</div>
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="text-xs font-semibold tracking-[0.32em] text-slate-100 whitespace-nowrap">HAND CONTROLLER</div>
+          <div className="hidden md:flex items-center gap-2">
+            <a href="https://www.instagram.com/echonull.exe/" target="_blank" rel="noreferrer" className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>IG</a>
+            <a href="https://xhslink.com/m/78p6SydXg7a" target="_blank" rel="noreferrer" className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>XHS</a>
+            <a href="mailto:echonullx8@gmail.com" className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>MAIL</a>
+          </div>
+        </div>
         <div className="flex gap-2 items-center">
           <div className="flex bg-slate-900/70 rounded-md p-1 gap-1 mr-2 border border-slate-200/10 shadow-inner shadow-black/30">
             <button onClick={() => setMode('LIVE_AR')} className={`px-3 py-1 text-xs rounded ${mode === 'LIVE_AR' ? ACTIVE_CHROME : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'}`}>LIVE AR</button>
@@ -408,6 +415,7 @@ export const ControlPanel: React.FC = () => {
                           <input
                             type="color"
                             value={visualConfig.particleColor || '#67E8F9'}
+                            onInput={(e) => setVisualConfig({ particleColor: e.currentTarget.value })}
                             onChange={(e) => setVisualConfig({ particleColor: e.target.value })}
                             className="h-5 w-10 cursor-pointer rounded-sm border border-slate-200/10 bg-slate-950/60 p-0"
                             title="Particle color"
@@ -419,6 +427,7 @@ export const ControlPanel: React.FC = () => {
                             max="2"
                             step="0.1"
                             value={visualConfig.particleSize || 1}
+                            onInput={(e) => setVisualConfig({ particleSize: parseFloat(e.currentTarget.value) })}
                             onChange={(e) => setVisualConfig({ particleSize: parseFloat(e.target.value) })}
                             className="w-12 h-1"
                             title="Particle size"
