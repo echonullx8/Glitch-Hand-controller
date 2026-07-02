@@ -77,7 +77,7 @@ const DEFAULT_VISUAL_CONFIG: VisualConfig = {
   videoOpacity: 1.0, mirrorVideo: true, mirrorSkeleton: true, skeletonOpacity: 1.0,
   particleColor: '#67E8F9',
   particleSize: 1.0,
-  asciiColor: '#00FF80',
+  asciiColor: '#00FF41',
   slots: DEFAULT_SLOTS
 };
 
