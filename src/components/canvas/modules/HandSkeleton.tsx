@@ -19,10 +19,7 @@ const Hand = ({ side }: { side: 'left' | 'right' }) => {
   const { handDataRef, isSwapped, visualConfig } = useAppStore();
   const { viewport } = useThree();
   
-  // 颜色微调：稍微降低饱和度，增加一点科技感
-  // Left: SpringGreen -> MediumSpringGreen
-  // Right: Cyan -> Turquoise
-  const baseColorHex = side === 'left' ? '#00FA9A' : '#40E0D0';
+  const baseColorHex = visualConfig.skeletonColor || '#67E8F9';
     const color = useMemo(() => {
           const c = new THREE.Color(baseColorHex);
           // 【关键修复】手动提亮颜色，抵消 Linear 空间的暗沉
