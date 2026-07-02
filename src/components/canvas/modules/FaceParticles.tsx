@@ -11,7 +11,7 @@ const AsciiMaterial = {
     uAmount: { value: 0 },
     uGridSize: { value: 150.0 },
     uMirror: { value: 0.0 },
-    uTextColor: { value: new THREE.Color('#00FF80') }
+    uTextColor: { value: new THREE.Color('#00FF41') }
   },
   vertexShader: `
     varying vec2 vUv;
@@ -143,7 +143,7 @@ export const FaceParticles: React.FC<{ params: any }> = ({ params }) => {
     materialRef.current.uniforms.uMap.value = videoTexture;
     materialRef.current.uniforms.uCharMap.value = charTexture;
     materialRef.current.uniforms.uMirror.value = visualConfig.mirrorVideo ? 1.0 : 0.0;
-    materialRef.current.uniforms.uTextColor.value.set(visualConfig.asciiColor || '#00FF80');
+    materialRef.current.uniforms.uTextColor.value.set(visualConfig.asciiColor || '#00FF41');
   });
 
   return (
