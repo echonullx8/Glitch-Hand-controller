@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useAppStore, getMetricValue } from '../../../store/useAppStore';
@@ -52,7 +52,7 @@ class ParticleSystemCPU {
   }
 }
 
-const SingleHandParticles = ({ side, params }: { side: 'left' | 'right', params: any }) => {
+const SingleHandParticles = ({ side, color, sizeScale, params }: { side: 'left' | 'right', color: string, sizeScale: number, params: any }) => {
   const { handDataRef, isSwapped, visualConfig } = useAppStore();
   const { viewport } = useThree();
   const system = useMemo(() => new ParticleSystemCPU(MAX_COUNT), []);
@@ -61,12 +61,22 @@ const SingleHandParticles = ({ side, params }: { side: 'left' | 'right', params:
   const sizes = useMemo(() => new Float32Array(MAX_COUNT), []);
   const opacities = useMemo(() => new Float32Array(MAX_COUNT), []);
 
+  useEffect(() => {
+    const material = pointsRef.current?.material as THREE.ShaderMaterial | undefined;
+    if (!material) return;
+    material.uniforms.uColor.value.set(color || DEFAULT_PARTICLE_COLOR);
+    material.uniformsNeedUpdate = true;
+  }, [color]);
+
+  useEffect(() => {
+    const material = pointsRef.current?.material as THREE.ShaderMaterial | undefined;
+    if (!material) return;
+    material.uniforms.uSizeScale.value = sizeScale || 1.0;
+    material.uniformsNeedUpdate = true;
+  }, [sizeScale]);
+
   useFrame(() => {
     if (!pointsRef.current) return;
-    const material = pointsRef.current.material as THREE.ShaderMaterial;
-    const latestConfig = useAppStore.getState().visualConfig;
-    material.uniforms.uColor.value.set(latestConfig.particleColor || DEFAULT_PARTICLE_COLOR);
-    material.uniforms.uSizeScale.value = latestConfig.particleSize || 1.0;
 
     const data = handDataRef.current;
     const p = params || { amountSource: 'None' };
@@ -148,10 +158,13 @@ const SingleHandParticles = ({ side, params }: { side: 'left' | 'right', params:
 };
 
 export const HandParticles: React.FC<{ params: any }> = ({ params }) => {
+  const particleColor = useAppStore(state => state.visualConfig.particleColor || DEFAULT_PARTICLE_COLOR);
+  const particleSize = useAppStore(state => state.visualConfig.particleSize || 1.0);
+
   return (
     <>
-      <SingleHandParticles side="left" params={params} />
-      <SingleHandParticles side="right" params={params} />
+      <SingleHandParticles side="left" color={particleColor} sizeScale={particleSize} params={params} />
+      <SingleHandParticles side="right" color={particleColor} sizeScale={particleSize} params={params} />
     </>
   );
 };
