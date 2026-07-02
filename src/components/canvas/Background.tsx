@@ -254,17 +254,19 @@ export const Background: React.FC = () => {
       meshRef.current.scale.set(scaleX, scaleY, 1);
 
       const data = handDataRef.current;
-      const isJellySeal = visualConfig.sealStyle === 'Jelly' && data.sealActive && data.left && data.right;
+      const sealLeft = data.sealLeft || data.left;
+      const sealRight = data.sealRight || data.right;
+      const isJellySeal = visualConfig.sealStyle === 'Jelly' && data.sealActive && sealLeft && sealRight;
       const points = jellyMaterial.uniforms.uPoints.value as THREE.Vector2[];
       const setPoint = (index: number, point: { x: number; y: number }) => {
           points[index].set(point.x, 1 - point.y);
       };
 
-      if (isJellySeal && data.left && data.right) {
-          setPoint(0, data.left.thumbTip);
-          setPoint(1, data.left.indexTip);
-          setPoint(2, data.right.thumbTip);
-          setPoint(3, data.right.indexTip);
+      if (isJellySeal && sealLeft && sealRight) {
+          setPoint(0, sealLeft.thumbTip);
+          setPoint(1, sealLeft.indexTip);
+          setPoint(2, sealRight.thumbTip);
+          setPoint(3, sealRight.indexTip);
       }
 
       jellyMaterial.uniforms.uTime.value += 0.016;
