@@ -95,7 +95,7 @@ const CONTROL_FIELD = 'bg-slate-950/60 border border-slate-200/10 text-slate-100
 const ACTIVE_CHROME = 'bg-cyan-200/12 text-cyan-50 border-cyan-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_0_20px_rgba(103,232,249,0.16)]';
 const INACTIVE_CHROME = 'border-slate-200/10 text-slate-300/70 hover:border-cyan-200/30 hover:bg-cyan-200/10 hover:text-slate-100';
 const ASCII_COLOR_OPTIONS = [
-  { label: 'GREEN', value: '#00FF80' },
+  { label: 'GREEN', value: '#00FF41' },
   { label: 'CYAN', value: '#67E8F9' },
 ];
 
@@ -433,7 +433,7 @@ export const ControlPanel: React.FC = () => {
                                   <button
                                     key={option.value}
                                     onClick={() => setVisualConfig({ asciiColor: option.value })}
-                                    className={`h-5 px-2 rounded-sm border text-[8px] font-bold tracking-[0.08em] ${((visualConfig.asciiColor || '#00FF80').toUpperCase() === option.value) ? ACTIVE_CHROME : INACTIVE_CHROME}`}
+                                    className={`h-5 px-2 rounded-sm border text-[8px] font-bold tracking-[0.08em] ${((visualConfig.asciiColor || '#00FF41').toUpperCase() === option.value) ? ACTIVE_CHROME : INACTIVE_CHROME}`}
                                     title={`ASCII ${option.label.toLowerCase()}`}
                                   >
                                       {option.label}
