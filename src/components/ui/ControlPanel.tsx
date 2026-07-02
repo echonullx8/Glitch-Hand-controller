@@ -51,7 +51,7 @@ const DEFAULT_MAPPINGS: MidiMapping[] = [
   { id: 'r-g3', hand: 'Right', parameter: 'gap3', cc: 17, channel: 1, label: 'G3', min: 0, max: 127 },
   { id: 'g-tdist', hand: 'Global', parameter: 'thumbsDist', cc: 20, channel: 1, label: 'T.Dst', min: 0, max: 127 },
   { id: 'g-idist', hand: 'Global', parameter: 'indexDist', cc: 21, channel: 1, label: 'I.Dst', min: 0, max: 127 },
-  { id: 'g-seal', hand: 'Global', parameter: 'sealSize', cc: 22, channel: 1, label: 'Seal Size', min: 0, max: 127 },
+  { id: 'g-seal', hand: 'Global', parameter: 'sealSize', cc: 22, channel: 1, label: 'S.Size', min: 0, max: 127 },
   { id: 'g-lpres', hand: 'Global', parameter: 'leftPresent', cc: 23, channel: 1, label: 'L.Pre', min: 0, max: 127 },
   { id: 'g-rpres', hand: 'Global', parameter: 'rightPresent', cc: 24, channel: 1, label: 'R.Pre', min: 0, max: 127 },
   { id: 'g-both', hand: 'Global', parameter: 'bothPresent', cc: 25, channel: 1, label: 'Both', min: 0, max: 127 },
@@ -90,7 +90,7 @@ const CompactMappingRow = ({ mapping, isSolo, onToggleSolo, value }: any) => {
 };
 
 const EFFECT_TYPES: EffectType[] = ['None', 'SimpleGlitch', 'AnalogGlitch', 'Particles', 'Ascii', 'Flash'];
-const SEAL_STYLES = ['Cyber', 'Ouroboros'] as const;
+const SEAL_STYLES = ['Cyber', 'Jelly'] as const;
 const GLASS_PANEL = 'bg-slate-950/55 backdrop-blur-xl border border-slate-200/10 shadow-[0_18px_60px_rgba(3,7,18,0.45)]';
 const CONTROL_FIELD = 'bg-slate-950/60 border border-slate-200/10 text-slate-100 shadow-inner shadow-black/30 focus:border-cyan-200/50 focus:outline-none';
 const ACTIVE_CHROME = 'bg-cyan-200/12 text-cyan-50 border-cyan-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_0_20px_rgba(103,232,249,0.16)]';
@@ -328,9 +328,9 @@ export const ControlPanel: React.FC = () => {
           <div className="hidden md:flex items-center gap-2">
             <a href="https://www.instagram.com/echonull.exe/" target="_blank" rel="noreferrer" className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>IG</a>
             <a href="https://xhslink.com/m/78p6SydXg7a" target="_blank" rel="noreferrer" className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>XHS</a>
-            <a href="https://www.notion.so/HandMotion-Controller-by-EchoNull-32dde760b9cf80e7a3adf7f5177979ac?source=copy_link" target="_blank" rel="noreferrer" className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>MANUAL</a>
+            <a href="https://nasal-punch-1d2.notion.site/HandMotion-Controller-by-EchoNull-32dde760b9cf80e7a3adf7f5177979ac?source=copy_link" target="_blank" rel="noreferrer" className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>MANUAL</a>
             <a href="https://echonull.bandcamp.com" target="_blank" rel="noreferrer" className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>BANDCAMP</a>
-            <span className="hidden xl:inline text-[8px] text-slate-400/85 tracking-[0.08em] whitespace-nowrap">欢迎购买任意专辑支持我的作品 / Buy any album to support my work</span>
+            <span className="hidden xl:inline text-[8px] text-slate-400/85 tracking-[0.08em] whitespace-nowrap">Buy any album to support my work</span>
           </div>
         </div>
         <div className="flex gap-2 items-center">
@@ -483,7 +483,7 @@ export const ControlPanel: React.FC = () => {
                       <span className="text-[9px]">STYLE</span>
                       <select
                         value={visualConfig.sealStyle || 'Cyber'}
-                        onChange={(e) => setVisualConfig({ sealStyle: e.target.value as 'Cyber' | 'Ouroboros' })}
+                        onChange={(e) => setVisualConfig({ sealStyle: e.target.value as 'Cyber' | 'Jelly' })}
                         className={`${CONTROL_FIELD} text-[9px] w-20 h-5 rounded-sm px-1`}
                       >
                           {SEAL_STYLES.map(style => <option key={style} value={style}>{style}</option>)}
