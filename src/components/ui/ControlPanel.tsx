@@ -91,6 +91,7 @@ const CompactMappingRow = ({ mapping, isSolo, onToggleSolo, value }: any) => {
 
 const EFFECT_TYPES: EffectType[] = ['None', 'SimpleGlitch', 'AnalogGlitch', 'Particles', 'Ascii', 'Flash'];
 const SEAL_STYLES = ['Cyber', 'Jelly'] as const;
+const SEAL_FILTERS = ['Colorize', 'Invert', 'Negative', 'None'] as const;
 const GLASS_PANEL = 'bg-slate-950/55 backdrop-blur-xl border border-slate-200/10 shadow-[0_18px_60px_rgba(3,7,18,0.45)]';
 const CONTROL_FIELD = 'bg-slate-950/60 border border-slate-200/10 text-slate-100 shadow-inner shadow-black/30 focus:border-cyan-200/50 focus:outline-none';
 const ACTIVE_CHROME = 'bg-cyan-200/12 text-cyan-50 border-cyan-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_0_20px_rgba(103,232,249,0.16)]';
@@ -502,6 +503,17 @@ export const ControlPanel: React.FC = () => {
                         className="w-20 h-1"
                         title="Seal opacity"
                       />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                      <span className="text-[9px]">FILTER</span>
+                      <select
+                        value={visualConfig.sealFilter || 'Colorize'}
+                        onChange={(e) => setVisualConfig({ sealFilter: e.target.value as 'Colorize' | 'Invert' | 'Negative' | 'None' })}
+                        className={`${CONTROL_FIELD} text-[9px] w-20 h-5 rounded-sm px-1`}
+                        title="Jelly membrane filter"
+                      >
+                          {SEAL_FILTERS.map(filter => <option key={filter} value={filter}>{filter}</option>)}
+                      </select>
                   </div>
                   <div className="flex items-center justify-between gap-2">
                       <span className="text-[9px]">COL</span>
