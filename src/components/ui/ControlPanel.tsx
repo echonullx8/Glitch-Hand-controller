@@ -328,7 +328,9 @@ export const ControlPanel: React.FC = () => {
           <div className="hidden md:flex items-center gap-2">
             <a href="https://www.instagram.com/echonull.exe/" target="_blank" rel="noreferrer" className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>IG</a>
             <a href="https://xhslink.com/m/78p6SydXg7a" target="_blank" rel="noreferrer" className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>XHS</a>
-            <a href="mailto:echonullx8@gmail.com" className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>MAIL</a>
+            <a href="https://www.notion.so/HandMotion-Controller-by-EchoNull-32dde760b9cf80e7a3adf7f5177979ac?source=copy_link" target="_blank" rel="noreferrer" className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>MANUAL</a>
+            <a href="https://echonull.bandcamp.com" target="_blank" rel="noreferrer" className={`text-[9px] px-2 py-1 rounded border ${INACTIVE_CHROME}`}>BANDCAMP</a>
+            <span className="hidden xl:inline text-[8px] text-slate-400/85 tracking-[0.08em] whitespace-nowrap">欢迎购买任意专辑支持我的作品 / Buy any album to support my work</span>
           </div>
         </div>
         <div className="flex gap-2 items-center">
