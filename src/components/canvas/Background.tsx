@@ -25,6 +25,7 @@ export const Background: React.FC = () => {
       uJellyStrength: { value: 0 },
       uJellyOpacity: { value: 1 },
       uJellyColor: { value: new THREE.Color('#67E8F9') },
+      uJellyFilter: { value: 3 },
       uPoints: {
         value: [
           new THREE.Vector2(0.5, 0.5),
@@ -48,6 +49,7 @@ export const Background: React.FC = () => {
       uniform float uJellyStrength;
       uniform float uJellyOpacity;
       uniform vec3 uJellyColor;
+      uniform int uJellyFilter;
       uniform vec2 uPoints[4];
       varying vec2 vUv;
 
@@ -115,9 +117,24 @@ export const Background: React.FC = () => {
         vec2 warpedUv = clamp(uv - warp, 0.001, 0.999);
         vec4 videoColor = texture2D(uMap, warpedUv);
         float sheen = pow(1.0 - abs(dot(normalize(fromCenter + vec2(0.0001)), pullAxis)), 2.0);
-        float tintAmount = clamp((membraneMask * 0.13 + edgeField * 0.035 + pointGlow * 0.08) * strength, 0.0, 0.3);
-        vec3 finalColor = mix(videoColor.rgb, uJellyColor, tintAmount);
-        finalColor += uJellyColor * sheen * membraneMask * strength * 0.16;
+        float filterAmount = clamp(membraneMask * strength * 0.9, 0.0, 1.0);
+        vec3 filteredColor = videoColor.rgb;
+
+        if (uJellyFilter == 1) {
+          filteredColor = 1.0 - videoColor.rgb;
+        } else if (uJellyFilter == 2) {
+          float luminance = dot(videoColor.rgb, vec3(0.299, 0.587, 0.114));
+          filteredColor = vec3(1.0 - luminance);
+        } else if (uJellyFilter == 3) {
+          float luminance = dot(videoColor.rgb, vec3(0.299, 0.587, 0.114));
+          filteredColor = uJellyColor * (0.35 + luminance * 1.15);
+        }
+
+        vec3 finalColor = mix(videoColor.rgb, filteredColor, filterAmount);
+        float filterEnabled = step(0.5, float(uJellyFilter));
+        float tintAmount = clamp((edgeField * 0.035 + pointGlow * 0.08) * strength * filterEnabled, 0.0, 0.22);
+        finalColor = mix(finalColor, uJellyColor, tintAmount);
+        finalColor += uJellyColor * sheen * membraneMask * strength * 0.16 * filterEnabled;
         gl_FragColor = vec4(finalColor, videoColor.a * uVideoOpacity);
       }
     `,
@@ -255,6 +272,13 @@ export const Background: React.FC = () => {
       jellyMaterial.uniforms.uVideoOpacity.value = visualConfig.videoOpacity;
       jellyMaterial.uniforms.uJellyOpacity.value = visualConfig.sealOpacity ?? 1;
       jellyMaterial.uniforms.uJellyColor.value.set(visualConfig.sealColor || '#67E8F9');
+      jellyMaterial.uniforms.uJellyFilter.value = visualConfig.sealFilter === 'Invert'
+        ? 1
+        : visualConfig.sealFilter === 'Negative'
+          ? 2
+          : visualConfig.sealFilter === 'None'
+            ? 0
+            : 3;
       jellyMaterial.uniforms.uJellyStrength.value = isJellySeal ? Math.min(1, Math.max(0, data.sealSize)) : 0;
   });
 
