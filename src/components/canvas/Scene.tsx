@@ -5,6 +5,7 @@ import { HandSkeleton } from './modules/HandSkeleton';
 import { CyberSeal } from './modules/CyberSeal';
 import { SimpleGlitch } from './modules/SimpleGlitch';
 import { AnalogGlitch } from './modules/AnalogGlitch';
+import { Datamosh } from './modules/Datamosh';
 import { HandParticles } from './modules/HandParticles';
 import { FlashEffect } from './modules/FlashEffect';
 import { FaceParticles } from './modules/FaceParticles';
@@ -15,7 +16,7 @@ import * as THREE from 'three';
 // 本地定义类型
 interface EffectSlot {
   id: string;
-  type: 'None' | 'SimpleGlitch' | 'AnalogGlitch' | 'Particles' | 'Flash' | 'Ascii' | 'FaceParticles';
+  type: 'None' | 'SimpleGlitch' | 'AnalogGlitch' | 'Datamosh' | 'Particles' | 'Flash' | 'Ascii' | 'FaceParticles';
   params: any;
   active: boolean;
 }
@@ -25,6 +26,7 @@ const EffectRenderer = ({ slot, overlayScene }: { slot: EffectSlot, overlayScene
     switch (slot.type) {
         case 'SimpleGlitch': return <SimpleGlitch params={slot.params} overlayScene={overlayScene} />;
         case 'AnalogGlitch': return <AnalogGlitch params={slot.params} />;
+        case 'Datamosh': return <Datamosh params={slot.params} />;
         case 'Particles': return <HandParticles params={slot.params} />;
         case 'Ascii': return <FaceParticles params={slot.params} />;
         case 'FaceParticles': return <FaceParticles params={slot.params} />;
@@ -71,6 +73,9 @@ const SceneContent: React.FC = () => {
               return <EffectRenderer key={slot.id} slot={slot} overlayScene={sealScene} />;
           }
           if (slot.type === 'AnalogGlitch') {
+              return <EffectRenderer key={slot.id} slot={slot} />;
+          }
+          if (slot.type === 'Datamosh') {
               return <EffectRenderer key={slot.id} slot={slot} />;
           }
           return null;
