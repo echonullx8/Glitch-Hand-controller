@@ -51,7 +51,7 @@ const DEFAULT_MAPPINGS: MidiMapping[] = [
   { id: 'r-g3', hand: 'Right', parameter: 'gap3', cc: 17, channel: 1, label: 'G3', min: 0, max: 127 },
   { id: 'g-tdist', hand: 'Global', parameter: 'thumbsDist', cc: 20, channel: 1, label: 'T.Dst', min: 0, max: 127 },
   { id: 'g-idist', hand: 'Global', parameter: 'indexDist', cc: 21, channel: 1, label: 'I.Dst', min: 0, max: 127 },
-  { id: 'g-seal', hand: 'Global', parameter: 'sealSize', cc: 22, channel: 1, label: 'W.Dst', min: 0, max: 127 },
+  { id: 'g-seal', hand: 'Global', parameter: 'sealSize', cc: 22, channel: 1, label: 'Seal Size', min: 0, max: 127 },
   { id: 'g-lpres', hand: 'Global', parameter: 'leftPresent', cc: 23, channel: 1, label: 'L.Pre', min: 0, max: 127 },
   { id: 'g-rpres', hand: 'Global', parameter: 'rightPresent', cc: 24, channel: 1, label: 'R.Pre', min: 0, max: 127 },
   { id: 'g-both', hand: 'Global', parameter: 'bothPresent', cc: 25, channel: 1, label: 'Both', min: 0, max: 127 },
@@ -79,7 +79,7 @@ const CompactMappingRow = ({ mapping, isSolo, onToggleSolo, value }: any) => {
 
   return (
     <div className="flex items-center gap-1 mb-1 h-5 group w-full">
-      <div className="w-8 text-[9px] text-right font-mono text-slate-400 group-hover:text-slate-100 uppercase truncate leading-none">{mapping.label}</div>
+      <div title={mapping.label} className="w-12 text-[9px] text-right font-mono text-slate-400 group-hover:text-slate-100 uppercase truncate leading-none">{mapping.label}</div>
       <div className="flex-1 h-full bg-slate-950/55 relative rounded-sm overflow-hidden border border-slate-200/10">
         <div className={`absolute top-0 bottom-0 left-0 transition-all duration-75 ease-out ${isSolo ? 'bg-cyan-200' : 'bg-slate-200/35'}`} style={{ width: `${Math.min(100, Math.max(0, value * 100))}%` }} />
         <div className="absolute inset-0 flex items-center justify-start px-1"><span className="text-[8px] font-mono text-white mix-blend-difference font-bold">{midiVal}</span></div>
@@ -90,6 +90,7 @@ const CompactMappingRow = ({ mapping, isSolo, onToggleSolo, value }: any) => {
 };
 
 const EFFECT_TYPES: EffectType[] = ['None', 'SimpleGlitch', 'AnalogGlitch', 'Particles', 'Ascii', 'Flash'];
+const SEAL_STYLES = ['Cyber', 'Ouroboros'] as const;
 const GLASS_PANEL = 'bg-slate-950/55 backdrop-blur-xl border border-slate-200/10 shadow-[0_18px_60px_rgba(3,7,18,0.45)]';
 const CONTROL_FIELD = 'bg-slate-950/60 border border-slate-200/10 text-slate-100 shadow-inner shadow-black/30 focus:border-cyan-200/50 focus:outline-none';
 const ACTIVE_CHROME = 'bg-cyan-200/12 text-cyan-50 border-cyan-100/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_0_20px_rgba(103,232,249,0.16)]';
@@ -473,6 +474,44 @@ export const ControlPanel: React.FC = () => {
                       <button onClick={() => setVisualConfig({ mirrorSkeleton: !visualConfig.mirrorSkeleton })} className={`w-2 h-2 rounded-full ${visualConfig.mirrorSkeleton ? 'bg-cyan-200 shadow-[0_0_10px_rgba(103,232,249,0.65)]' : 'bg-slate-600'}`} />
                   </div>
                   {/* 【清理】移除了 SEAL IMG 上传区域 */}
+              </div>
+              <div className="flex flex-col gap-1 w-36 shrink-0 border-l border-slate-200/10 pl-2">
+                  <span className="text-[9px] text-cyan-100 font-bold tracking-[0.2em]">SEAL</span>
+                  <div className="flex items-center justify-between gap-2">
+                      <span className="text-[9px]">STYLE</span>
+                      <select
+                        value={visualConfig.sealStyle || 'Cyber'}
+                        onChange={(e) => setVisualConfig({ sealStyle: e.target.value as 'Cyber' | 'Ouroboros' })}
+                        className={`${CONTROL_FIELD} text-[9px] w-20 h-5 rounded-sm px-1`}
+                      >
+                          {SEAL_STYLES.map(style => <option key={style} value={style}>{style}</option>)}
+                      </select>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                      <span className="text-[9px]">OP.</span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={visualConfig.sealOpacity ?? 1}
+                        onInput={(e) => setVisualConfig({ sealOpacity: parseFloat(e.currentTarget.value) })}
+                        onChange={(e) => setVisualConfig({ sealOpacity: parseFloat(e.target.value) })}
+                        className="w-20 h-1"
+                        title="Seal opacity"
+                      />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                      <span className="text-[9px]">COL</span>
+                      <input
+                        type="color"
+                        value={visualConfig.sealColor || '#67E8F9'}
+                        onInput={(e) => setVisualConfig({ sealColor: e.currentTarget.value })}
+                        onChange={(e) => setVisualConfig({ sealColor: e.target.value })}
+                        className="h-5 w-20 cursor-pointer rounded-sm border border-slate-200/10 bg-slate-950/60 p-0"
+                        title="Seal color"
+                      />
+                  </div>
               </div>
           </div>
       )}
