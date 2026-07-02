@@ -58,6 +58,7 @@ export interface VisualConfig {
   particleSize: number;
   asciiColor: string;
   sealStyle: 'Cyber' | 'Jelly';
+  sealFilter: 'Colorize' | 'Invert' | 'Negative' | 'None';
   sealOpacity: number;
   sealColor: string;
   slots: [EffectSlot, EffectSlot, EffectSlot, EffectSlot];
@@ -82,6 +83,7 @@ const DEFAULT_VISUAL_CONFIG: VisualConfig = {
   particleSize: 1.0,
   asciiColor: '#00FF41',
   sealStyle: 'Cyber',
+  sealFilter: 'Colorize',
   sealOpacity: 1.0,
   sealColor: '#67E8F9',
   slots: DEFAULT_SLOTS
