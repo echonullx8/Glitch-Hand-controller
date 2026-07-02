@@ -123,10 +123,11 @@ const SingleHandParticles = ({ side, color, sizeScale, params }: { side: 'left' 
         <bufferAttribute attach="attributes-opacity" count={MAX_COUNT} array={opacities} itemSize={1} />
       </bufferGeometry>
       <shaderMaterial
+        key={`${color || DEFAULT_PARTICLE_COLOR}-${sizeScale || 1.0}`}
         transparent depthWrite={false} depthTest={false} blending={THREE.NormalBlending}
         uniforms={{
-          uColor: { value: new THREE.Color(DEFAULT_PARTICLE_COLOR) },
-          uSizeScale: { value: 1.0 }
+          uColor: { value: new THREE.Color(color || DEFAULT_PARTICLE_COLOR) },
+          uSizeScale: { value: sizeScale || 1.0 }
         }}
         vertexShader={`
           uniform float uSizeScale; attribute float size; attribute float opacity; varying float vOpacity;
