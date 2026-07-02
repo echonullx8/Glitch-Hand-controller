@@ -21,6 +21,7 @@ const calculateAngle = (p1: any, p2: any, p3: any) => {
     return Math.acos(Math.min(1, Math.max(-1, dot / (mag1 * mag2)))) || 0;
 };
 const dist = (p1: {x:number, y:number}, p2: {x:number, y:number}) => Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+const SEAL_DROP_GRACE_MS = 220;
 
 export const HandTracker: React.FC = () => {
   // 【关键】不再从 store 里解构 isSwapped
@@ -36,6 +37,8 @@ export const HandTracker: React.FC = () => {
   const smoothedCameraFpsRef = useRef(0);
   const loopModeRef = useRef('idle');
   const isReadyRef = useRef(false);
+  const lastSealAtRef = useRef(0);
+  const lastSealSizeRef = useRef(0);
 
   useEffect(() => {
     isMounted.current = true;
@@ -216,7 +219,15 @@ export const HandTracker: React.FC = () => {
     if (!results.landmarks || results.landmarks.length === 0) {
         currentData.left = null;
         currentData.right = null;
-        currentData.sealActive = false;
+        const keepSeal = currentData.sealActive && now - lastSealAtRef.current < SEAL_DROP_GRACE_MS;
+        currentData.sealActive = keepSeal;
+        if (!keepSeal) {
+            currentData.sealSize = 0;
+            currentData.sealLeft = null;
+            currentData.sealRight = null;
+        } else {
+            currentData.sealSize = lastSealSizeRef.current;
+        }
         currentData.leftPresent = 0;
         currentData.rightPresent = 0;
         currentData.bothPresent = 0;
@@ -303,12 +314,25 @@ export const HandTracker: React.FC = () => {
             
             if (currentData.sealActive) {
                 currentData.sealSize = Math.min(1.0, (tDist * 2.0) + 0.05);
+                currentData.sealLeft = newLeft;
+                currentData.sealRight = newRight;
+                lastSealAtRef.current = now;
+                lastSealSizeRef.current = currentData.sealSize;
             } else {
                 currentData.sealSize = 0;
+                currentData.sealLeft = null;
+                currentData.sealRight = null;
             }
         } else {
-            currentData.sealActive = false;
-            currentData.sealSize = 0;
+            const keepSeal = currentData.sealActive && now - lastSealAtRef.current < SEAL_DROP_GRACE_MS;
+            currentData.sealActive = keepSeal;
+            if (keepSeal) {
+                currentData.sealSize = lastSealSizeRef.current;
+            } else {
+                currentData.sealSize = 0;
+                currentData.sealLeft = null;
+                currentData.sealRight = null;
+            }
         }
         
         currentData.lastUpdated = now;
