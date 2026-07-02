@@ -29,86 +29,6 @@ const ShockwaveMaterial = {
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
-const OuroborosSeal: React.FC<{ color: string; opacity: number }> = ({ color, opacity }) => {
-  const groupRef = useRef<THREE.Group>(null);
-  const { curve, ribs, head, tail } = useMemo(() => {
-    const points: THREE.Vector3[] = [];
-    for (let i = 0; i < 96; i += 1) {
-      const t = (i / 96) * Math.PI * 2;
-      points.push(new THREE.Vector3(
-        Math.sin(t) * 1.05,
-        Math.sin(t * 2) * 0.46,
-        Math.cos(t) * 0.08
-      ));
-    }
-
-    const snakeCurve = new THREE.CatmullRomCurve3(points, true, 'catmullrom', 0.45);
-    const ribData = Array.from({ length: 42 }, (_, index) => {
-      const amount = index / 42;
-      const point = snakeCurve.getPointAt(amount);
-      const tangent = snakeCurve.getTangentAt(amount);
-      return {
-        point,
-        rotation: [0, 0, Math.atan2(tangent.y, tangent.x) + Math.PI / 2] as [number, number, number],
-        scale: 0.65 + Math.sin(amount * Math.PI * 2) * 0.25,
-      };
-    });
-
-    const headPoint = snakeCurve.getPointAt(0.03);
-    const headTangent = snakeCurve.getTangentAt(0.03);
-    const tailPoint = snakeCurve.getPointAt(0.97);
-    const tailTangent = snakeCurve.getTangentAt(0.97);
-
-    return {
-      curve: snakeCurve,
-      ribs: ribData,
-      head: {
-        point: headPoint,
-        rotation: [0, 0, Math.atan2(headTangent.y, headTangent.x) - Math.PI / 2] as [number, number, number],
-      },
-      tail: {
-        point: tailPoint,
-        rotation: [0, 0, Math.atan2(tailTangent.y, tailTangent.x) + Math.PI / 2] as [number, number, number],
-      },
-    };
-  }, []);
-
-  useFrame((state, delta) => {
-    if (!groupRef.current) return;
-    groupRef.current.rotation.z -= delta * 0.38;
-    groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.7) * 0.12;
-  });
-
-  const safeOpacity = clamp01(opacity);
-
-  return (
-    <group ref={groupRef}>
-      <mesh>
-        <tubeGeometry args={[curve, 180, 0.045, 10, true]} />
-        <meshBasicMaterial color={color} transparent opacity={0.42 * safeOpacity} blending={THREE.AdditiveBlending} depthWrite={false} depthTest={false} />
-      </mesh>
-      <mesh>
-        <tubeGeometry args={[curve, 180, 0.018, 8, true]} />
-        <meshBasicMaterial color="#f8fbff" transparent opacity={0.8 * safeOpacity} blending={THREE.AdditiveBlending} depthWrite={false} depthTest={false} />
-      </mesh>
-      {ribs.map((rib, index) => (
-        <mesh key={index} position={rib.point} rotation={rib.rotation}>
-          <boxGeometry args={[0.16 * rib.scale, 0.014, 0.014]} />
-          <meshBasicMaterial color="#f8fbff" transparent opacity={0.64 * safeOpacity} blending={THREE.AdditiveBlending} depthWrite={false} depthTest={false} />
-        </mesh>
-      ))}
-      <mesh position={head.point} rotation={head.rotation}>
-        <coneGeometry args={[0.13, 0.26, 4]} />
-        <meshBasicMaterial color={color} transparent opacity={0.9 * safeOpacity} blending={THREE.AdditiveBlending} depthWrite={false} depthTest={false} />
-      </mesh>
-      <mesh position={tail.point} rotation={tail.rotation}>
-        <coneGeometry args={[0.055, 0.26, 8]} />
-        <meshBasicMaterial color="#f8fbff" transparent opacity={0.72 * safeOpacity} blending={THREE.AdditiveBlending} depthWrite={false} depthTest={false} />
-      </mesh>
-    </group>
-  );
-};
-
 export const CyberSeal: React.FC = () => {
   const { handDataRef, visualConfig, sealImage } = useAppStore();
   const { viewport } = useThree();
@@ -200,21 +120,21 @@ export const CyberSeal: React.FC = () => {
   useFrame((state, delta) => {
     if (!groupRef.current) return;
     const data = handDataRef.current;
-    const sealColor = visualConfig.sealColor || '#67E8F9';
+    const sealColor = '#67E8F9';
     const sealOpacity = clamp01(visualConfig.sealOpacity ?? 1);
+    const useJellySeal = visualConfig.sealStyle === 'Jelly';
     
     // 激活逻辑
     const active = data.sealActive && data.sealSize > 0.01;
-    groupRef.current.visible = active;
+    groupRef.current.visible = active && !useJellySeal;
     
     // 调试：如果 active 为 false，控制台不会一直打印，只有状态改变时才重要
     // if (active) console.log("Seal Active, Size:", data.sealSize);
     
-    if (!active) return;
+    if (!active || useJellySeal) return;
 
     const speed = 2.0 + data.sealSize * 4.0;
     const t = state.clock.elapsedTime;
-    const showOuroboros = visualConfig.sealStyle === 'Ouroboros';
 
     [matWire, matMid, matInner].forEach((mat, index) => {
         mat.uniforms.uColor.value.set(sealColor);
@@ -228,7 +148,7 @@ export const CyberSeal: React.FC = () => {
     matCore.uniforms.uOpacity.value = sealOpacity;
 
     // 如果有图片，只旋转图片
-    if (texture && imagePlaneRef.current && !showOuroboros) {
+    if (texture && imagePlaneRef.current) {
         imagePlaneRef.current.rotation.z -= delta * speed * 0.5;
     }
     // 如果没有图片，执行 3D 动画
@@ -276,9 +196,7 @@ export const CyberSeal: React.FC = () => {
 
   return (
     <group ref={groupRef}>
-      {visualConfig.sealStyle === 'Ouroboros' ? (
-          <OuroborosSeal color={visualConfig.sealColor || '#67E8F9'} opacity={visualConfig.sealOpacity ?? 1} />
-      ) : texture ? (
+      {texture ? (
           // 方案 A: 自定义图片
           <mesh ref={imagePlaneRef}>
               <planeGeometry args={[2.0, 2.0]} />
