@@ -23,6 +23,7 @@ export interface FaceMetrics {
 
 export interface HandData {
   left: HandMetrics | null; right: HandMetrics | null;
+  sealLeft: HandMetrics | null; sealRight: HandMetrics | null;
   face: FaceMetrics | null;
   sealActive: boolean; sealSize: number; thumbsDist: number; indexDist: number;
   leftPresent: number;
@@ -40,7 +41,7 @@ export interface HandData {
   };
 }
 
-export type EffectType = 'None' | 'SimpleGlitch' | 'AnalogGlitch' | 'Particles' | 'Flash' | 'Ascii';
+export type EffectType = 'None' | 'SimpleGlitch' | 'AnalogGlitch' | 'Datamosh' | 'Particles' | 'Flash' | 'Ascii';
 
 export interface EffectParams {
   amountSource: string; amountInvert: boolean;
@@ -202,6 +203,7 @@ export const useAppStore = create<AppState>()(
       handDataRef: {
         current: {
           left: null, right: null, face: null,
+          sealLeft: null, sealRight: null,
           sealActive: false, sealSize: 0, thumbsDist: 1, indexDist: 1,
           leftPresent: 0, rightPresent: 0, bothPresent: 0,
           lastUpdated: 0,
