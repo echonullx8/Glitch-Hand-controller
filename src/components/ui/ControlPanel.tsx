@@ -469,6 +469,17 @@ export const ControlPanel: React.FC = () => {
                       <input type="range" min="0" max="1" step="0.1" value={visualConfig.skeletonOpacity} onChange={(e) => setVisualConfig({ skeletonOpacity: parseFloat(e.target.value) })} className="w-12 h-1" />
                   </div>
                   <div className="flex items-center justify-between">
+                      <span className="text-[9px]">SKEL C.</span>
+                      <input
+                        type="color"
+                        value={visualConfig.skeletonColor || '#67E8F9'}
+                        onInput={(e) => setVisualConfig({ skeletonColor: e.currentTarget.value })}
+                        onChange={(e) => setVisualConfig({ skeletonColor: e.target.value })}
+                        className="h-5 w-12 cursor-pointer rounded-sm border border-slate-200/10 bg-slate-950/60 p-0"
+                        title="Skeleton color"
+                      />
+                  </div>
+                  <div className="flex items-center justify-between">
                       <span className="text-[9px]">M. VIDEO</span>
                       <button onClick={() => setVisualConfig({ mirrorVideo: !visualConfig.mirrorVideo })} className={`w-2 h-2 rounded-full ${visualConfig.mirrorVideo ? 'bg-cyan-200 shadow-[0_0_10px_rgba(103,232,249,0.65)]' : 'bg-slate-600'}`} />
                   </div>
@@ -515,17 +526,19 @@ export const ControlPanel: React.FC = () => {
                           {SEAL_FILTERS.map(filter => <option key={filter} value={filter}>{filter}</option>)}
                       </select>
                   </div>
-                  <div className="flex items-center justify-between gap-2">
-                      <span className="text-[9px]">COL</span>
-                      <input
-                        type="color"
-                        value={visualConfig.sealColor || '#67E8F9'}
-                        onInput={(e) => setVisualConfig({ sealColor: e.currentTarget.value })}
-                        onChange={(e) => setVisualConfig({ sealColor: e.target.value })}
-                        className="h-5 w-20 cursor-pointer rounded-sm border border-slate-200/10 bg-slate-950/60 p-0"
-                        title="Seal color"
-                      />
-                  </div>
+                  {(visualConfig.sealFilter || 'Colorize') === 'Colorize' && (
+                      <div className="flex items-center justify-between gap-2">
+                          <span className="text-[9px]">COL</span>
+                          <input
+                            type="color"
+                            value={visualConfig.sealColor || '#67E8F9'}
+                            onInput={(e) => setVisualConfig({ sealColor: e.currentTarget.value })}
+                            onChange={(e) => setVisualConfig({ sealColor: e.target.value })}
+                            className="h-5 w-20 cursor-pointer rounded-sm border border-slate-200/10 bg-slate-950/60 p-0"
+                            title="Seal color"
+                          />
+                      </div>
+                  )}
               </div>
           </div>
       )}
