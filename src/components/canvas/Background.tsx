@@ -51,26 +51,73 @@ export const Background: React.FC = () => {
       uniform vec2 uPoints[4];
       varying vec2 vUv;
 
+      float cross2(vec2 a, vec2 b) {
+        return a.x * b.y - a.y * b.x;
+      }
+
+      float sdSegment(vec2 p, vec2 a, vec2 b) {
+        vec2 pa = p - a;
+        vec2 ba = b - a;
+        float h = clamp(dot(pa, ba) / max(dot(ba, ba), 0.0001), 0.0, 1.0);
+        return length(pa - ba * h);
+      }
+
+      float triangleMask(vec2 p, vec2 a, vec2 b, vec2 c) {
+        float c1 = cross2(b - a, p - a);
+        float c2 = cross2(c - b, p - b);
+        float c3 = cross2(a - c, p - c);
+        float hasNeg = step(c1, 0.0) + step(c2, 0.0) + step(c3, 0.0);
+        float hasPos = step(0.0, c1) + step(0.0, c2) + step(0.0, c3);
+        return 1.0 - step(0.5, min(hasNeg, hasPos));
+      }
+
       void main() {
         vec2 uv = vUv;
         vec2 warp = vec2(0.0);
-        float glow = 0.0;
         float strength = uJellyStrength * uJellyOpacity;
+        vec2 leftThumb = uPoints[0];
+        vec2 leftIndex = uPoints[1];
+        vec2 rightThumb = uPoints[2];
+        vec2 rightIndex = uPoints[3];
+        vec2 center = (leftThumb + leftIndex + rightThumb + rightIndex) * 0.25;
+        vec2 leftCenter = (leftThumb + leftIndex) * 0.5;
+        vec2 rightCenter = (rightThumb + rightIndex) * 0.5;
+        vec2 pullAxis = normalize(rightCenter - leftCenter + vec2(0.0001));
+        vec2 crossAxis = normalize((leftIndex + rightIndex) * 0.5 - (leftThumb + rightThumb) * 0.5 + vec2(0.0001));
+        float span = length(rightCenter - leftCenter);
+        float membrane = max(
+          triangleMask(uv, leftThumb, rightThumb, rightIndex),
+          triangleMask(uv, leftThumb, rightIndex, leftIndex)
+        );
+        float edgeField =
+          exp(-sdSegment(uv, leftThumb, rightThumb) * 18.0) +
+          exp(-sdSegment(uv, leftIndex, rightIndex) * 18.0) +
+          exp(-sdSegment(uv, leftThumb, leftIndex) * 22.0) +
+          exp(-sdSegment(uv, rightThumb, rightIndex) * 22.0);
+        float centerField = exp(-length(uv - center) * 5.0);
+        float membraneMask = clamp(membrane + edgeField * 0.32 + centerField * 0.2, 0.0, 1.0);
+        float stretch = strength * smoothstep(0.04, 0.62, span);
+        vec2 fromCenter = uv - center;
+        warp += pullAxis * dot(fromCenter, pullAxis) * membraneMask * stretch * 0.22;
+        warp += crossAxis * dot(fromCenter, crossAxis) * membraneMask * stretch * 0.07;
+        float pointGlow = 0.0;
 
         for (int i = 0; i < 4; i++) {
           vec2 toPixel = uv - uPoints[i];
           float dist = length(toPixel);
-          float falloff = exp(-dist * 13.0);
+          float falloff = exp(-dist * 16.0);
           vec2 dir = normalize(toPixel + vec2(0.0001));
-          float ripple = sin(dist * 46.0 - uTime * 8.0) * 0.006;
-          warp += dir * falloff * strength * (0.05 + ripple);
-          glow += falloff;
+          float ripple = sin(dist * 52.0 - uTime * 9.0) * 0.005;
+          warp += dir * falloff * strength * (0.025 + ripple);
+          pointGlow += falloff;
         }
 
         vec2 warpedUv = clamp(uv - warp, 0.001, 0.999);
         vec4 videoColor = texture2D(uMap, warpedUv);
-        float tintAmount = clamp(glow * strength * 0.16, 0.0, 0.28);
+        float sheen = pow(1.0 - abs(dot(normalize(fromCenter + vec2(0.0001)), pullAxis)), 2.0);
+        float tintAmount = clamp((membraneMask * 0.13 + edgeField * 0.035 + pointGlow * 0.08) * strength, 0.0, 0.3);
         vec3 finalColor = mix(videoColor.rgb, uJellyColor, tintAmount);
+        finalColor += uJellyColor * sheen * membraneMask * strength * 0.16;
         gl_FragColor = vec4(finalColor, videoColor.a * uVideoOpacity);
       }
     `,
@@ -193,8 +240,7 @@ export const Background: React.FC = () => {
       const isJellySeal = visualConfig.sealStyle === 'Jelly' && data.sealActive && data.left && data.right;
       const points = jellyMaterial.uniforms.uPoints.value as THREE.Vector2[];
       const setPoint = (index: number, point: { x: number; y: number }) => {
-          const x = visualConfig.mirrorVideo ? 1 - point.x : point.x;
-          points[index].set(x, 1 - point.y);
+          points[index].set(point.x, 1 - point.y);
       };
 
       if (isJellySeal && data.left && data.right) {
